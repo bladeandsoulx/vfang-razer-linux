@@ -4,6 +4,24 @@ All notable changes to Fang are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.9.7] — 2026-07-30 — Fedora detection repair
+
+### Fixed
+
+- Fang installs on Fedora 43 and 44 again. Both releases were rejected before
+  anything downloaded: Fedora ships an empty `VERSION_CODENAME`, which the
+  installer treated as malformed, and Fedora 43 removed the `PLATFORM_ID` field
+  the installer paired against, so every Fedora user saw an unsupported-release
+  error. `CPE_NAME` now identifies the Fedora release, and `PLATFORM_ID` is
+  still accepted so derivatives based on older Fedora keep working.
+
+### Added
+
+- Installer detection is now tested against the real `/etc/os-release` of every
+  Ubuntu, Debian, and Fedora image in the release test matrix, and each release
+  check confirms those captured files still match the distribution they came
+  from.
+
 ## [0.9.6] — 2026-07-30 — Ubuntu 26.04 LTS
 
 ### Added
@@ -355,6 +373,7 @@ All notable changes to Fang are documented here. The format is based on
 - Privileged `fangd` daemon + unprivileged Tauri/Svelte app over a Unix socket;
   settings persist and re-apply after reboot and suspend/resume.
 
+[0.9.7]: https://github.com/bladeandsoulx/fang-razer-linux/releases/tag/v0.9.7
 [0.9.6]: https://github.com/bladeandsoulx/fang-razer-linux/releases/tag/v0.9.6
 [0.9.5]: https://github.com/bladeandsoulx/fang-razer-linux/releases/tag/v0.9.5
 [0.9.4]: https://github.com/bladeandsoulx/fang-razer-linux/releases/tag/v0.9.4

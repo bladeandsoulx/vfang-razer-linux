@@ -2,6 +2,25 @@
   // Mirrors CHANGELOG.md, condensed for the panel. Newest first.
   const RELEASES = [
     {
+      version: '0.9.7',
+      date: '2026-07-30',
+      title: 'Fedora detection repair',
+      groups: [
+        {
+          kind: 'Fixed',
+          items: [
+            'Fang installs on Fedora 43 and 44 again; both were rejected before anything downloaded because Fedora removed the release field the installer checked.'
+          ]
+        },
+        {
+          kind: 'Added',
+          items: [
+            'Installer detection is tested against the real system identity of every Ubuntu, Debian, and Fedora release Fang supports.'
+          ]
+        }
+      ]
+    },
+    {
       version: '0.9.6',
       date: '2026-07-30',
       title: 'Ubuntu 26.04 LTS',

@@ -9,17 +9,38 @@ const panel = fs.readFileSync(path.join(root, 'app/src/screens/Changelog.svelte'
 const changelog = fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
 
 test('the in-app changelog contains the latest releases in descending order', () => {
+  const v097 = panel.indexOf("version: '0.9.7'");
   const v096 = panel.indexOf("version: '0.9.6'");
   const v095 = panel.indexOf("version: '0.9.5'");
   const v094 = panel.indexOf("version: '0.9.4'");
   const v093 = panel.indexOf("version: '0.9.3'");
   const v092 = panel.indexOf("version: '0.9.2'");
 
-  assert.ok(v096 >= 0, 'v0.9.6 must be present');
+  assert.ok(v097 >= 0, 'v0.9.7 must be present');
+  assert.ok(v096 > v097, 'v0.9.6 must follow v0.9.7');
   assert.ok(v095 > v096, 'v0.9.5 must follow v0.9.6');
   assert.ok(v094 > v095, 'v0.9.4 must follow v0.9.5');
   assert.ok(v093 > v094, 'v0.9.3 must follow v0.9.4');
   assert.ok(v092 > v093, 'v0.9.2 must follow v0.9.3');
+});
+
+test('v0.9.7 records the Fedora detection repair', () => {
+  const v097Start = panel.indexOf("version: '0.9.7'");
+  const v096Start = panel.indexOf("version: '0.9.6'");
+  const v097Panel = panel.slice(v097Start, v096Start);
+  const v097Changelog = changelog.slice(
+    changelog.indexOf('## [0.9.7]'),
+    changelog.indexOf('## [0.9.6]')
+  );
+
+  assert.ok(v097Start >= 0, 'v0.9.7 must be present');
+  assert.ok(v096Start > v097Start, 'v0.9.6 must follow v0.9.7');
+  assert.match(v097Panel, /Fedora 43 and 44 again/i);
+  assert.match(v097Panel, /real system identity/i);
+  assert.match(v097Changelog, /## \[0\.9\.7\].*Fedora detection repair/);
+  assert.match(v097Changelog, /CPE_NAME/);
+  assert.match(v097Changelog, /PLATFORM_ID/);
+  assert.match(v097Changelog, /VERSION_CODENAME/);
 });
 
 test('v0.9.6 records the Ubuntu 26.04 release', () => {
