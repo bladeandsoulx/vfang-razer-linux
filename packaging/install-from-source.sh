@@ -3,6 +3,28 @@
 # Usage: sudo ./packaging/install-from-source.sh   (run from the repo root)
 set -euo pipefail
 
+# Everything below assumes apt-get and Debian's -dev package names. Check the
+# family before asking for root, so a Fedora user gets a useful message instead
+# of a bare "apt-get: command not found" after already elevating.
+# Read os-release rather than sourcing it, matching install.sh's posture.
+if [ -r /etc/os-release ]; then
+    DISTRO_ID="$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"' | head -n 1)"
+    DISTRO_ID_LIKE="$(sed -n 's/^ID_LIKE=//p' /etc/os-release | tr -d '"' | head -n 1)"
+else
+    DISTRO_ID=
+    DISTRO_ID_LIKE=
+fi
+
+case " $DISTRO_ID $DISTRO_ID_LIKE " in
+    *" debian "* | *" ubuntu "*) ;;
+    *)
+        echo "this script builds from source on Debian and Ubuntu only" >&2
+        echo "detected: ${DISTRO_ID:-unknown}" >&2
+        echo "on Fedora, install the released RPMs instead - see README.md" >&2
+        exit 1
+        ;;
+esac
+
 if [ "$(id -u)" -ne 0 ]; then
     echo "run as root: sudo $0" >&2
     exit 1
