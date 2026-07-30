@@ -223,7 +223,7 @@ test('documentation exposes release, review, integrity, manual, and source insta
     readme,
     /Open \*\*Terminal\*\*, paste this one line, and press \*\*Enter\*\*:/
   );
-  assert.match(readme, /open \*\*Fang\*\* from your app menu/i);
+  assert.match(readme, /open \*\*VFang\*\* from your app menu/i);
   assert.match(
     readme,
     /curl -fsSL https:\/\/github\.com\/bladeandsoulx\/fang-razer-linux\/releases\/latest\/download\/install\.sh \| bash/
@@ -248,6 +248,16 @@ test('documentation exposes release, review, integrity, manual, and source insta
   assert.match(readme, /Install release packages manually/);
   assert.match(readme, /packaging\/install-from-source\.sh/);
   assert.match(contributing, /IMMUTABLE_RELEASES_TOKEN/);
+  for (const [name, content] of [
+    ['README.md', readme],
+    ['CONTRIBUTING.md', contributing],
+    ['HARDWARE_TESTING.md', hardware]
+  ]) {
+    assert.match(content, /\bVFang\b/, name);
+    assert.doesNotMatch(content, /\bFang\b/, name);
+  }
+  assert.match(readme, /Fang_0\.9\.7_amd64\.deb/);
+  assert.match(readme, /bladeandsoulx\/fang-razer-linux/);
   assert.match(contributing, /read-only.*Administration|Administration.*read-only/is);
   assert.match(hardware, /packaging\/install-from-source\.sh/);
 });

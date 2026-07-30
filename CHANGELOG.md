@@ -1,14 +1,20 @@
 # Changelog
 
-All notable changes to Fang are documented here. The format is based on
+All notable changes to VFang are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
-## [0.9.7] — 2026-07-30 — Fedora detection repair
+## [0.9.7] — 2026-07-30 — VFang rebrand and Fedora detection repair
+
+### Changed
+
+- The user-facing product is renamed to VFang. Package names, executables,
+  service and IPC identities, repository links, and release filenames remain
+  unchanged so existing installations upgrade in place.
 
 ### Fixed
 
-- Fang installs on Fedora 43 and 44 again. Both releases were rejected before
+- VFang installs on Fedora 43 and 44 again. Both releases were rejected before
   anything downloaded: Fedora ships an empty `VERSION_CODENAME`, which the
   installer treated as malformed, and Fedora 43 removed the `PLATFORM_ID` field
   the installer paired against, so every Fedora user saw an unsupported-release
@@ -18,9 +24,9 @@ All notable changes to Fang are documented here. The format is based on
 ### Added
 
 - Installer detection is now tested against the real `/etc/os-release` of every
-  Ubuntu, Debian, and Fedora image in the release test matrix, and each release
-  check confirms those captured files still match the distribution they came
-  from.
+  Ubuntu, Debian, and Fedora release VFang supports in the release test
+  matrix, and each release check confirms those captured files still match the
+  distribution they came from.
 
 ## [0.9.6] — 2026-07-30 — Ubuntu 26.04 LTS
 

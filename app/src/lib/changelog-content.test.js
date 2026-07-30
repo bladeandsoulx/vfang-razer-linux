@@ -24,7 +24,7 @@ test('the in-app changelog contains the latest releases in descending order', ()
   assert.ok(v092 > v093, 'v0.9.2 must follow v0.9.3');
 });
 
-test('v0.9.7 records the Fedora detection repair', () => {
+test('v0.9.7 records the VFang rebrand and Fedora detection repair', () => {
   const v097Start = panel.indexOf("version: '0.9.7'");
   const v096Start = panel.indexOf("version: '0.9.6'");
   const v097Panel = panel.slice(v097Start, v096Start);
@@ -37,6 +37,10 @@ test('v0.9.7 records the Fedora detection repair', () => {
   assert.ok(v096Start > v097Start, 'v0.9.6 must follow v0.9.7');
   assert.match(v097Panel, /Fedora 43 and 44 again/i);
   assert.match(v097Panel, /real system identity/i);
+  assert.match(v097Panel, /user-facing product is renamed to VFang/i);
+  assert.match(v097Changelog, /user-facing product is renamed to VFang/i);
+  assert.doesNotMatch(v097Panel, /\bFang\b/);
+  assert.doesNotMatch(v097Changelog, /\bFang\b/);
   assert.match(v097Changelog, /## \[0\.9\.7\].*Fedora detection repair/);
   assert.match(v097Changelog, /CPE_NAME/);
   assert.match(v097Changelog, /PLATFORM_ID/);

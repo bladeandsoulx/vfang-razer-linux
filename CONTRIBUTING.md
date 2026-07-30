@@ -1,4 +1,4 @@
-# Contributing to Fang
+# Contributing to VFang
 
 ## Development setup — no Razer hardware needed
 
