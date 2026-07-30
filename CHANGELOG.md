@@ -4,6 +4,22 @@ All notable changes to Fang are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.9.6] — 2026-07-30 — Ubuntu 26.04 LTS
+
+### Added
+
+- Ubuntu 26.04 LTS is a supported installation base, both as a direct match and
+  through the compatible-family path used by derivatives such as Zorin OS, Linux
+  Mint, Pop!_OS, and KDE neon.
+- Clean-container package lifecycle checks now run on Ubuntu 26.04 before any
+  release can be published.
+
+### Fixed
+
+- The from-source build script now reports that it supports Debian and Ubuntu
+  only, and points at the RPM packages, instead of failing with a missing
+  `apt-get` after asking for administrator access.
+
 ## [0.9.5] — 2026-07-23 — Neon Fang installer
 
 ### Changed

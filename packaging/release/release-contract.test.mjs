@@ -165,17 +165,17 @@ test('documentation exposes release, review, integrity, manual, and source insta
   );
   assert.match(readme, /curl -fLO .*releases\/latest\/download\/install\.sh/);
   assert.match(readme, /less install\.sh\nbash install\.sh/);
-  assert.match(readme, /releases\/download\/v0\.9\.5\/\{install\.sh,SHA256SUMS\}/);
+  assert.match(readme, /releases\/download\/v0\.9\.6\/\{install\.sh,SHA256SUMS\}/);
   assert.match(
     readme,
-    /sudo apt install \.\/fangd_0\.9\.5-1_amd64\.deb \.\/Fang_0\.9\.5_amd64\.deb/
+    /sudo apt install \.\/fangd_0\.9\.6-1_amd64\.deb \.\/Fang_0\.9\.6_amd64\.deb/
   );
   assert.match(
     readme,
-    /sudo dnf install \.\/fangd-0\.9\.5-1\.x86_64\.rpm \.\/fang-0\.9\.5-1\.x86_64\.rpm/
+    /sudo dnf install \.\/fangd-0\.9\.6-1\.x86_64\.rpm \.\/fang-0\.9\.6-1\.x86_64\.rpm/
   );
   assert.match(readme, /sha256sum --check .*install\.sh/);
-  assert.match(readme, /^- Ubuntu 22\.04 and 24\.04$/m);
+  assert.match(readme, /^- Ubuntu 22\.04, 24\.04, and 26\.04$/m);
   assert.match(readme, /^- Debian 12 and 13$/m);
   assert.match(readme, /^- Fedora 43 and 44$/m);
   assert.match(readme, /do not add `sudo`/);
