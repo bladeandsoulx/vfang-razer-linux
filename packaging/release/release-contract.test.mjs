@@ -235,3 +235,30 @@ test('documentation exposes release, review, integrity, manual, and source insta
   assert.match(contributing, /read-only.*Administration|Administration.*read-only/is);
   assert.match(hardware, /packaging\/install-from-source\.sh/);
 });
+
+// core.fileMode is false here, so a lost exec bit is invisible locally: the file
+// stays 775 on disk while the tree records 100644, and only a fresh checkout -
+// CI - fails, with a bare "Permission denied" from whichever workflow step runs
+// the script directly. Assert the recorded mode so it fails for whoever drops it.
+test('every tracked shell script is recorded executable', () => {
+  const listed = spawnSync('git', ['ls-files', '-s', '-z', '--', '*.sh'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8'
+  });
+  assert.equal(listed.status, 0, listed.stderr);
+
+  const entries = listed.stdout
+    .split('\0')
+    .filter(Boolean)
+    .map((record) => {
+      const [meta, file] = record.split('\t');
+      return { file, mode: meta.split(' ')[0] };
+    });
+
+  assert.ok(entries.length >= 7, `expected the packaging scripts, saw ${entries.length}`);
+  assert.deepEqual(
+    entries.filter(({ mode }) => mode !== '100755'),
+    [],
+    'these scripts are not recorded executable; fix with git update-index --chmod=+x'
+  );
+});
