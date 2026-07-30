@@ -158,7 +158,6 @@ parse_os_release() {
   OS_VERSION_ID=
   OS_VERSION_CODENAME=
   OS_UBUNTU_CODENAME=
-  OS_PLATFORM_ID=
   OS_CPE_NAME=
 
   [[ -r $source ]] || fatal "Cannot read operating-system identity from $source."
@@ -182,7 +181,7 @@ parse_os_release() {
       VERSION_ID) OS_VERSION_ID=$value ;;
       VERSION_CODENAME) OS_VERSION_CODENAME=$value ;;
       UBUNTU_CODENAME) OS_UBUNTU_CODENAME=$value ;;
-      PLATFORM_ID) OS_PLATFORM_ID=$value ;;
+      PLATFORM_ID) : ;;
       CPE_NAME) OS_CPE_NAME=$value ;;
     esac
   done < "$source"

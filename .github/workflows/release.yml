@@ -25,13 +25,15 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends shellcheck
       - run: node app/scripts/version.mjs check
       - run: node --test app/scripts/version.test.mjs
+      - run: node --test packaging/installer/check-os-release.test.mjs
       - run: node packaging/installer/installer.test.mjs
       - run: node packaging/release/release-contract.test.mjs
       - run: node packaging/release/publish.test.mjs
       - run: node packaging/deb/verify.test.mjs
       - run: node --test packaging/rpm/build-script.test.mjs packaging/rpm/metadata.test.mjs
       - run: >
-          shellcheck install.sh packaging/install-from-source.sh packaging/deb/verify.sh
+          shellcheck install.sh packaging/install-from-source.sh
+          packaging/installer/check-os-release.sh packaging/deb/verify.sh
           packaging/rpm/build.sh packaging/rpm/verify.sh packaging/release/publish.sh
 
   debs:
@@ -106,7 +108,8 @@ jobs:
             debian:13) expected_platform='Debian 13' ;;
             *) echo "unsupported installer test image: $IMAGE" >&2; exit 1 ;;
           esac
-          packaging/installer/check-os-release.sh "${IMAGE/:/-}" "$expected_platform"
+          capture_name="${IMAGE%%:*}-${IMAGE#*:}"
+          packaging/installer/check-os-release.sh "$capture_name" "$expected_platform"
       - uses: actions/download-artifact@v4
         with:
           name: fang-debs

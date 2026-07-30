@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Usage: packaging/installer/check-os-release.sh CAPTURE_NAME EXPECTED_PLATFORM
 #
-# Assert that this machine's /etc/os-release still agrees with the captured
+# Assert that the real operating-system identity agrees with the captured
 # projection the installer tests detect against. Run inside each CI matrix
-# container so a capture cannot drift from upstream unnoticed: Fedora 43 dropped
-# PLATFORM_ID and shipped an empty VERSION_CODENAME, which broke detection on
-# every supported Fedora while hand-written fixtures kept the suite green.
+# container so a capture cannot drift from upstream unnoticed: Fedora 43
+# dropped PLATFORM_ID and shipped an empty VERSION_CODENAME, which broke
+# detection on every supported Fedora while hand-written fixtures kept the
+# suite green.
 #
 # Only the fields install.sh actually parses are compared. Everything else in
 # os-release (PRETTY_NAME, SUPPORT_END, point-release VERSION strings) churns
@@ -21,19 +22,24 @@ expected_platform=${2:-}
 
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 capture="$root/packaging/installer/os-release/$name"
+os_release_file=${FANG_OS_RELEASE_FILE:-/etc/os-release}
 
 [[ -r $capture ]] || {
     echo "no captured os-release projection: $capture" >&2
     exit 1
 }
+[[ -r $os_release_file ]] || {
+    echo "cannot read operating-system identity: $os_release_file" >&2
+    exit 1
+}
 
 fields='^(ID|ID_LIKE|VERSION_ID|VERSION_CODENAME|UBUNTU_CODENAME|PLATFORM_ID|CPE_NAME)='
 
-if ! grep -E "$fields" /etc/os-release | diff -u "$capture" -; then
+if ! grep -E "$fields" "$os_release_file" | diff -u "$capture" -; then
     echo >&2
-    echo "/etc/os-release no longer matches packaging/installer/os-release/$name." >&2
+    echo "$os_release_file no longer matches packaging/installer/os-release/$name." >&2
     echo "Re-capture it and confirm detect_platform still gates this release:" >&2
-    echo "  grep -E '$fields' /etc/os-release > packaging/installer/os-release/$name" >&2
+    echo "  grep -E '$fields' '$os_release_file' > packaging/installer/os-release/$name" >&2
     exit 1
 fi
 
@@ -80,7 +86,7 @@ set +e
 probe_output=$(
     PATH="$probe_bin:$PATH" \
     FANG_INSTALLER_TESTING=1 \
-    FANG_OS_RELEASE_FILE=/etc/os-release \
+    FANG_OS_RELEASE_FILE="$os_release_file" \
     "${runner[@]}" bash "$root/install.sh" 2>&1
 )
 probe_status=$?
@@ -96,4 +102,4 @@ if ((probe_status == 0)); then
     exit 1
 fi
 
-echo "installer detected $expected_platform from this container's /etc/os-release"
+echo "installer detected $expected_platform from $os_release_file"

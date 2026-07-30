@@ -350,16 +350,17 @@ const derivatives = [
     'Debian 12',
     'ID=devuan\nID_LIKE=debian\nVERSION_ID="5"\nVERSION_CODENAME=bookworm\n'
   ],
+  // Synthetic compatibility probes cover both supported Fedora CPE branches
+  // without representing any real derivative distribution's os-release shape.
   [
-    'ultramarine',
+    'fedora-remix-44',
     'Fedora 44',
-    'ID=ultramarine\nID_LIKE="fedora"\nVERSION_ID="40"\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'
+    'ID=fedora-remix-44\nID_LIKE="fedora"\nVERSION_ID="40"\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'
   ],
-  // Fedora derivatives identify their supported Fedora base with CPE_NAME.
   [
-    'nobara',
+    'fedora-remix-43',
     'Fedora 43',
-    'ID=nobara\nID_LIKE="fedora"\nVERSION_ID="43"\nCPE_NAME="cpe:/o:fedoraproject:fedora:43"\n'
+    'ID=fedora-remix-43\nID_LIKE="fedora"\nVERSION_ID="43"\nCPE_NAME="cpe:/o:fedoraproject:fedora:43"\n'
   ]
 ];
 
@@ -379,7 +380,7 @@ for (const [name, base, osRelease] of derivatives) {
 test('refuses Fedora identities that rely only on the retired PLATFORM_ID pairing', () => {
   for (const osRelease of [
     'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nPLATFORM_ID="platform:f44"\n',
-    'ID=ultramarine\nID_LIKE="fedora"\nVERSION_ID="40"\nPLATFORM_ID="platform:f44"\n'
+    'ID=fedora-remix-44\nID_LIKE="fedora"\nVERSION_ID="40"\nPLATFORM_ID="platform:f44"\n'
   ]) {
     const fixture = makeFixture({ osRelease });
     const result = fixture.run();

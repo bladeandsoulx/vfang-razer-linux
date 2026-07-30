@@ -12,8 +12,8 @@ All notable changes to Fang are documented here. The format is based on
   anything downloaded: Fedora ships an empty `VERSION_CODENAME`, which the
   installer treated as malformed, and Fedora 43 removed the `PLATFORM_ID` field
   the installer paired against, so every Fedora user saw an unsupported-release
-  error. `CPE_NAME` now identifies the Fedora release, and `PLATFORM_ID` is
-  still accepted so derivatives based on older Fedora keep working.
+  error. `CPE_NAME` now identifies the Fedora release. `PLATFORM_ID` remains a
+  validated legacy parser key but no longer participates in release selection.
 
 ### Added
 
