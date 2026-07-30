@@ -353,10 +353,9 @@ const derivatives = [
   [
     'ultramarine',
     'Fedora 44',
-    'ID=ultramarine\nID_LIKE="fedora"\nVERSION_ID="40"\nPLATFORM_ID="platform:f44"\n'
+    'ID=ultramarine\nID_LIKE="fedora"\nVERSION_ID="40"\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'
   ],
-  // Current Fedora derivatives carry CPE_NAME; ultramarine above keeps the
-  // retired PLATFORM_ID path covered for derivatives still on Fedora <= 42.
+  // Fedora derivatives identify their supported Fedora base with CPE_NAME.
   [
     'nobara',
     'Fedora 43',
@@ -376,6 +375,19 @@ for (const [name, base, osRelease] of derivatives) {
     fixture.cleanup();
   });
 }
+
+test('refuses Fedora identities that rely only on the retired PLATFORM_ID pairing', () => {
+  for (const osRelease of [
+    'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nPLATFORM_ID="platform:f44"\n',
+    'ID=ultramarine\nID_LIKE="fedora"\nVERSION_ID="40"\nPLATFORM_ID="platform:f44"\n'
+  ]) {
+    const fixture = makeFixture({ osRelease });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0, osRelease);
+    assert.doesNotMatch(fixture.commands(), /^sudo /m);
+    fixture.cleanup();
+  }
+});
 
 // Every image in CI's deb-test and rpm-test matrices contributes the real
 // parser-visible fields of its /etc/os-release. Detection is asserted against
