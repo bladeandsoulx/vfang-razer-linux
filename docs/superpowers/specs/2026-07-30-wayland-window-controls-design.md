@@ -1,4 +1,4 @@
-# VFang Wayland Window Controls Fix
+# VFang 0.9.8 Wayland Window Controls Fix
 
 **Date:** 2026-07-30
 
@@ -40,6 +40,21 @@ cannot consume TAO 0.36 without an unreleased or forked Tauri runtime.
 - Changing VFang's default window dimensions or minimum dimensions.
 - Changing the close-to-tray preference or tray menu behavior.
 - Depending on an unreleased Tauri branch or a third-party TAO fork.
+- Creating, tagging, or publishing the GitHub release as part of the code
+  change. Publication remains a separate explicit action after review.
+
+## Release Scope
+
+Ship the correction as VFang 0.9.8. The repository's version setter will move
+the desktop app, daemon, Cargo/npm/Tauri manifests and lockfiles, DEB/RPM
+metadata, release installer, and installer banner to 0.9.8 as one synchronized
+release line. The daemon is rebuilt at 0.9.8 even though its behavior is
+unchanged, because VFang's release contract distributes and installs a matched
+app/daemon package pair.
+
+The top-level and in-app changelogs will add a 0.9.8 “Wayland window controls”
+entry. Pinned README install examples and their documentation contract will
+also move to v0.9.8. Historical release notes remain unchanged.
 
 ## Design
 
@@ -116,4 +131,7 @@ Verification will include:
   forward without leaving its controls unresponsive.
 - Close-to-tray still hides the window when enabled.
 - X11 and non-Linux builds retain their existing behavior.
+- Every independently packaged component and installer reference reports
+  version 0.9.8, and the app requires the matching 0.9.x daemon release line.
+- The README and both changelog surfaces describe 0.9.8.
 - The complete automated test suite remains green.
