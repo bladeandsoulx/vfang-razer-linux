@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: packaging/installer/check-os-release.sh CAPTURE_NAME
+# Usage: packaging/installer/check-os-release.sh CAPTURE_NAME EXPECTED_PLATFORM
 #
 # Assert that this machine's /etc/os-release still agrees with the captured
 # projection the installer tests detect against. Run inside each CI matrix
@@ -13,8 +13,9 @@
 set -euo pipefail
 
 name=${1:-}
-[[ -n $name ]] || {
-    echo "usage: ${0##*/} CAPTURE_NAME" >&2
+expected_platform=${2:-}
+[[ -n $name && -n $expected_platform ]] || {
+    echo "usage: ${0##*/} CAPTURE_NAME EXPECTED_PLATFORM" >&2
     exit 2
 }
 
@@ -37,3 +38,62 @@ if ! grep -E "$fields" /etc/os-release | diff -u "$capture" -; then
 fi
 
 echo "os-release projection matches $name"
+
+# CI containers run as root, but the release installer deliberately refuses to
+# run that way.  Drop privileges for the probe and replace only the commands
+# that could download or mutate the container.  curl stops immediately after
+# detection, so the probe never reaches a real download or elevated operation.
+probe_dir=$(mktemp -d)
+probe_bin="$probe_dir/bin"
+mkdir "$probe_bin"
+chmod 755 "$probe_dir" "$probe_bin"
+trap 'rm -rf -- "$probe_dir"' EXIT
+
+write_probe_command() {
+    local command=$1
+    shift
+    printf '%s\n' "$@" > "$probe_bin/$command"
+    chmod 755 "$probe_bin/$command"
+}
+
+write_probe_command curl \
+    '#!/usr/bin/env bash' \
+    "printf '%s\\n' 'installer detection probe stopped before download' >&2" \
+    'exit 1'
+for command in sudo apt-get dnf systemctl usermod; do
+    write_probe_command "$command" \
+        '#!/usr/bin/env bash' \
+        "printf '%s\\n' 'installer detection probe blocked system mutation' >&2" \
+        'exit 1'
+done
+
+runner=()
+if [[ $EUID == 0 ]]; then
+    command -v setpriv >/dev/null 2>&1 || {
+        echo 'setpriv is required to probe installer detection from a root container.' >&2
+        exit 1
+    }
+    runner=(setpriv --reuid=65534 --regid=65534 --clear-groups)
+fi
+
+set +e
+probe_output=$(
+    PATH="$probe_bin:$PATH" \
+    FANG_INSTALLER_TESTING=1 \
+    FANG_OS_RELEASE_FILE=/etc/os-release \
+    "${runner[@]}" bash "$root/install.sh" 2>&1
+)
+probe_status=$?
+set -e
+printf '%s\n' "$probe_output"
+
+if [[ $probe_output != *"Detected: linux ($expected_platform)"* ]]; then
+    echo "installer detected a platform other than expected: $expected_platform" >&2
+    exit 1
+fi
+if ((probe_status == 0)); then
+    echo 'installer detection probe unexpectedly completed without blocking downloads.' >&2
+    exit 1
+fi
+
+echo "installer detected $expected_platform from this container's /etc/os-release"

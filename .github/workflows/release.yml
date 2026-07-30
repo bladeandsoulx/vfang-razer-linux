@@ -97,7 +97,16 @@ jobs:
       - name: os-release projection still matches this image
         env:
           IMAGE: ${{ matrix.image }}
-        run: packaging/installer/check-os-release.sh "${IMAGE/:/-}"
+        run: |
+          case "$IMAGE" in
+            ubuntu:22.04) expected_platform='Ubuntu 22.04' ;;
+            ubuntu:24.04) expected_platform='Ubuntu 24.04' ;;
+            ubuntu:26.04) expected_platform='Ubuntu 26.04' ;;
+            debian:12) expected_platform='Debian 12' ;;
+            debian:13) expected_platform='Debian 13' ;;
+            *) echo "unsupported installer test image: $IMAGE" >&2; exit 1 ;;
+          esac
+          packaging/installer/check-os-release.sh "${IMAGE/:/-}" "$expected_platform"
       - uses: actions/download-artifact@v4
         with:
           name: fang-debs
@@ -156,7 +165,9 @@ jobs:
         with:
           persist-credentials: false
       - name: os-release projection still matches this image
-        run: packaging/installer/check-os-release.sh "fedora-${{ matrix.fedora }}"
+        run: >
+          packaging/installer/check-os-release.sh "fedora-${{ matrix.fedora }}"
+          "Fedora ${{ matrix.fedora }}"
       - uses: actions/download-artifact@v4
         with:
           name: fang-rpms
