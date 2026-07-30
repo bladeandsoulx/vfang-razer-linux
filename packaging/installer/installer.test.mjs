@@ -350,12 +350,12 @@ const derivatives = [
     'Debian 12',
     'ID=devuan\nID_LIKE=debian\nVERSION_ID="5"\nVERSION_CODENAME=bookworm\n'
   ],
-  // Synthetic compatibility probes cover both supported Fedora CPE branches
-  // without representing any real derivative distribution's os-release shape.
+  // Synthetic compatibility probes cover both exact supported Fedora identity
+  // pairs without representing any real derivative distribution's os-release.
   [
     'fedora-remix-44',
     'Fedora 44',
-    'ID=fedora-remix-44\nID_LIKE="fedora"\nVERSION_ID="40"\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'
+    'ID=fedora-remix-44\nID_LIKE="fedora"\nVERSION_ID="44"\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'
   ],
   [
     'fedora-remix-43',
@@ -386,6 +386,38 @@ test('refuses Fedora identities that rely only on the retired PLATFORM_ID pairin
     const result = fixture.run();
     assert.notEqual(result.status, 0, osRelease);
     assert.doesNotMatch(fixture.commands(), /^sudo /m);
+    fixture.cleanup();
+  }
+});
+
+test('Fedora derivatives require an exact VERSION_ID:CPE_NAME pair before download or sudo', () => {
+  const cases = [
+    ['missing both identity fields', ''],
+    ['bare VERSION_ID', 'VERSION_ID="44"\n'],
+    ['bare CPE_NAME', 'CPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'],
+    [
+      'unsupported VERSION_ID with a supported CPE_NAME',
+      'VERSION_ID="40"\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'
+    ],
+    [
+      'Fedora 43 VERSION_ID with Fedora 44 CPE_NAME',
+      'VERSION_ID="43"\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'
+    ],
+    [
+      'Fedora 44 VERSION_ID with Fedora 43 CPE_NAME',
+      'VERSION_ID="44"\nCPE_NAME="cpe:/o:fedoraproject:fedora:43"\n'
+    ]
+  ];
+
+  for (const [label, fields] of cases) {
+    const fixture = makeFixture({
+      osRelease: `ID=fedora-remix\nID_LIKE="fedora"\n${fields}`
+    });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0, label);
+    const commands = fixture.commands();
+    assert.doesNotMatch(commands, /^curl /m, label);
+    assert.doesNotMatch(commands, /^sudo /m, label);
     fixture.cleanup();
   }
 });

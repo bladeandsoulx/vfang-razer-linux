@@ -260,10 +260,10 @@ detect_platform() {
       *) fatal "Unsupported or missing Debian base for $OS_ID." ;;
     esac
   elif ((fedora_like)); then
-    case $OS_CPE_NAME in
-      cpe:/o:fedoraproject:fedora:43)
+    case $OS_VERSION_ID:$OS_CPE_NAME in
+      43:cpe:/o:fedoraproject:fedora:43)
         PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 43' ;;
-      cpe:/o:fedoraproject:fedora:44)
+      44:cpe:/o:fedoraproject:fedora:44)
         PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 44' ;;
       *) fatal "Unsupported or missing Fedora base for $OS_ID." ;;
     esac

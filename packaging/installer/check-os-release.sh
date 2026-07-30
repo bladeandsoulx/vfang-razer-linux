@@ -51,9 +51,16 @@ echo "os-release projection matches $name"
 # detection, so the probe never reaches a real download or elevated operation.
 probe_dir=$(mktemp -d)
 probe_bin="$probe_dir/bin"
-mkdir "$probe_bin"
+probe_state="$probe_dir/state"
+mkdir "$probe_bin" "$probe_state"
 chmod 755 "$probe_dir" "$probe_bin"
+chmod 733 "$probe_state"
 trap 'rm -rf -- "$probe_dir"' EXIT
+readonly probe_stop_marker='installer detection probe stopped before download'
+readonly mutation_block_marker='installer detection probe blocked system mutation'
+readonly probe_stop_status=86
+readonly mutation_block_status=87
+readonly probe_curl_status_file="$probe_state/curl-status"
 
 write_probe_command() {
     local command=$1
@@ -62,15 +69,19 @@ write_probe_command() {
     chmod 755 "$probe_bin/$command"
 }
 
+# download_file reports curl failures through fatal(), so record the stub's
+# unique status separately instead of confusing the installer's status 1 with
+# proof that this particular command stopped it.
 write_probe_command curl \
     '#!/usr/bin/env bash' \
-    "printf '%s\\n' 'installer detection probe stopped before download' >&2" \
-    'exit 1'
+    "trap 'status=\$?; printf \"%s\\n\" \"\$status\" > \"\$FANG_INSTALLER_PROBE_CURL_STATUS_FILE\"' EXIT" \
+    "printf '%s\\n' '$probe_stop_marker' >&2" \
+    "exit $probe_stop_status"
 for command in sudo apt-get dnf systemctl usermod; do
     write_probe_command "$command" \
         '#!/usr/bin/env bash' \
-        "printf '%s\\n' 'installer detection probe blocked system mutation' >&2" \
-        'exit 1'
+        "printf '%s\\n' '$mutation_block_marker' >&2" \
+        "exit $mutation_block_status"
 done
 
 runner=()
@@ -86,6 +97,7 @@ set +e
 probe_output=$(
     PATH="$probe_bin:$PATH" \
     FANG_INSTALLER_TESTING=1 \
+    FANG_INSTALLER_PROBE_CURL_STATUS_FILE="$probe_curl_status_file" \
     FANG_OS_RELEASE_FILE="$os_release_file" \
     "${runner[@]}" bash "$root/install.sh" 2>&1
 )
@@ -93,12 +105,35 @@ probe_status=$?
 set -e
 printf '%s\n' "$probe_output"
 
+probe_stopped=0
+mutation_blocked=0
+probe_curl_status=
+while IFS= read -r probe_line; do
+    [[ $probe_line == "$probe_stop_marker" ]] && probe_stopped=1
+    [[ $probe_line == "$mutation_block_marker" ]] && mutation_blocked=1
+done <<< "$probe_output"
+if [[ -r $probe_curl_status_file ]]; then
+    probe_curl_status=$(< "$probe_curl_status_file")
+fi
+
 if [[ $probe_output != *"Detected: linux ($expected_platform)"* ]]; then
     echo "installer detected a platform other than expected: $expected_platform" >&2
     exit 1
 fi
+if ((mutation_blocked)); then
+    echo 'installer detection probe reached a blocked system mutation command.' >&2
+    exit 1
+fi
 if ((probe_status == 0)); then
     echo 'installer detection probe unexpectedly completed without blocking downloads.' >&2
+    exit 1
+fi
+if [[ $probe_curl_status != "$probe_stop_status" ]]; then
+    echo "installer curl sentinel exited with ${probe_curl_status:-unknown} instead of $probe_stop_status." >&2
+    exit 1
+fi
+if ((!probe_stopped)); then
+    echo "installer detection probe did not emit the exact marker: $probe_stop_marker" >&2
     exit 1
 fi
 
