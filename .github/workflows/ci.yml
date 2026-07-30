@@ -131,6 +131,10 @@ jobs:
           git ca-certificates systemd python3 dbus-x11 xvfb xauth
           desktop-file-utils procps
       - uses: actions/checkout@v4
+      - name: os-release projection still matches this image
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: packaging/installer/check-os-release.sh "${IMAGE/:/-}"
       - uses: actions/download-artifact@v4
         with:
           name: fang-debs
@@ -182,8 +186,10 @@ jobs:
           dnf install -y
           git tar gzip rpm-build systemd systemd-rpm-macros desktop-file-utils
           python3 dbus-daemon xorg-x11-server-Xvfb xorg-x11-xauth
-          libayatana-appindicator-gtk3 findutils procps-ng
+          libayatana-appindicator-gtk3 findutils procps-ng diffutils
       - uses: actions/checkout@v4
+      - name: os-release projection still matches this image
+        run: packaging/installer/check-os-release.sh "fedora-${{ matrix.fedora }}"
       - uses: actions/download-artifact@v4
         with:
           name: fang-rpms

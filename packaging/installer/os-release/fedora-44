@@ -1,0 +1,4 @@
+ID=fedora
+VERSION_ID=44
+VERSION_CODENAME=""
+CPE_NAME="cpe:/o:fedoraproject:fedora:44"

@@ -377,6 +377,36 @@ for (const [name, base, osRelease] of derivatives) {
   });
 }
 
+// Every image in CI's deb-test and rpm-test matrices contributes the real
+// parser-visible fields of its /etc/os-release. Detection is asserted against
+// that captured content here, and a CI step re-derives the same projection
+// inside each container so the copies cannot drift from upstream unnoticed.
+// Fedora 43 removing PLATFORM_ID went unnoticed precisely because only
+// hand-written fixtures existed.
+const realOsReleaseDir = path.join(root, 'packaging/installer/os-release');
+
+test('detection accepts the real os-release of every tested image', () => {
+  const files = fs.readdirSync(realOsReleaseDir).sort();
+  assert.ok(files.length >= 7, 'captured os-release projections are missing');
+
+  for (const file of files) {
+    const [distro, release] = file.split('-');
+    assert.ok(distro && release, `unparseable capture name: ${file}`);
+    const label = `${distro[0].toUpperCase()}${distro.slice(1)} ${release}`;
+    const osRelease = fs.readFileSync(path.join(realOsReleaseDir, file), 'utf8');
+
+    const fixture = makeFixture({ osRelease });
+    const result = fixture.run();
+    assert.equal(result.status, 0, `${file}\n${result.stdout}${result.stderr}`);
+    assert.match(
+      result.stdout,
+      new RegExp(`Detected: linux \\(${label.replace('.', '\\.')}\\)`)
+    );
+    assert.match(fixture.commands(), distro === 'fedora' ? /\.rpm/ : /\.deb/);
+    fixture.cleanup();
+  }
+});
+
 test('refuses root by an unoverrideable EUID check', () => {
   const source = fs.readFileSync(installer, 'utf8');
   assert.match(source, /\[\[ \$EUID != 0 \]\] \|\|\n\s+fatal 'Run this installer as your desktop user without sudo\.'/);
