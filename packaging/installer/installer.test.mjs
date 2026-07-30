@@ -294,6 +294,7 @@ esac
 const directPlatforms = [
   ['Ubuntu 22.04', 'ID=ubuntu\nVERSION_ID="22.04"\nVERSION_CODENAME=jammy\n', 'DEB'],
   ['Ubuntu 24.04', 'ID=ubuntu\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\n', 'DEB'],
+  ['Ubuntu 26.04', 'ID=ubuntu\nVERSION_ID="26.04"\nVERSION_CODENAME=resolute\n', 'DEB'],
   ['Debian 12', 'ID=debian\nVERSION_ID="12"\nVERSION_CODENAME=bookworm\n', 'DEB'],
   ['Debian 13', 'ID=debian\nVERSION_ID="13"\nVERSION_CODENAME=trixie\n', 'DEB'],
   ['Fedora 43', 'ID=fedora\nVERSION_ID="43"\nPLATFORM_ID="platform:f43"\n', 'RPM'],
@@ -328,6 +329,11 @@ const derivatives = [
     'pop',
     'Ubuntu 24.04',
     'ID=pop\nID_LIKE="ubuntu debian"\nVERSION_ID="24.04"\nUBUNTU_CODENAME=noble\n'
+  ],
+  [
+    'neon',
+    'Ubuntu 26.04',
+    'ID=neon\nID_LIKE="ubuntu debian"\nVERSION_ID="26.04"\nUBUNTU_CODENAME=resolute\n'
   ],
   [
     'devuan',
@@ -380,6 +386,7 @@ test('refuses malformed, duplicate, unsupported, and conflicting platform data',
     'ID=ubuntu\nID=debian\nVERSION_ID="24.04"\n',
     'ID="$(touch /tmp/no)"\nVERSION_ID="24.04"\n',
     'ID=ubuntu\nVERSION_ID="26.04"\nVERSION_CODENAME=questing\n',
+    'ID=ubuntu\nVERSION_ID="26.04"\n',
     'ID=zorin\nID_LIKE="ubuntu debian"\nUBUNTU_CODENAME=questing\n',
     'ID=mystery\nVERSION_ID="1"\n',
     'ID=hybrid\nID_LIKE="ubuntu fedora"\nUBUNTU_CODENAME=noble\nPLATFORM_ID=platform:f44\n'
