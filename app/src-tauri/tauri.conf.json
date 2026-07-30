@@ -65,7 +65,8 @@
         "depends": [
           "fangd (>= 0.9.7)",
           "fangd (<< 0.10.0)"
-        ]
+        ],
+        "desktopTemplate": "vfang.desktop"
       }
     }
   }

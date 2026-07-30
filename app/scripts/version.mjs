@@ -126,7 +126,7 @@ function check() {
     for (const [name, version] of versions) {
       console.error(name + ': ' + version);
     }
-    throw new Error('Fang release versions are not synchronized');
+    throw new Error('VFang release versions are not synchronized');
   }
 
   const tauri = JSON.parse(read('app/src-tauri/tauri.conf.json'));
@@ -146,7 +146,7 @@ function check() {
     !/^Requires:\s*fangd < %\{fangd_upper\}\s*$/m.test(fangRpm) ||
     rpmMacro(fangRpm, 'fangd_upper') !== upper
   ) {
-    throw new Error('Fang RPM must depend on the matching fangd release line');
+    throw new Error('VFang RPM must depend on the matching fangd release line');
   }
   if (
     !depends.includes('fangd (>= ' + expected + ')') ||
@@ -154,7 +154,7 @@ function check() {
   ) {
     throw new Error('Tauri deb must depend on the matching fangd release line');
   }
-  console.log('Fang version sync OK: ' + expected);
+  console.log('VFang version sync OK: ' + expected);
 }
 
 function setVersion(version) {

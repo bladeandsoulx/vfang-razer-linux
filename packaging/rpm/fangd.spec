@@ -3,7 +3,7 @@
 Name: fangd
 Version: 0.9.7
 Release: 1
-Summary: Privileged hardware-control daemon for Fang
+Summary: Privileged hardware-control daemon for VFang
 License: GPL-2.0-only
 URL: https://github.com/bladeandsoulx/fang-razer-linux
 Source0: fangd

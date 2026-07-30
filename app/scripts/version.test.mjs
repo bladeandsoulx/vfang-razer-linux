@@ -65,6 +65,14 @@ test('check rejects an incorrect RPM upper bound', () => {
   fs.rmSync(dir, { recursive: true });
 });
 
+test('check reports the VFang brand without changing the release version', () => {
+  const dir = fixture();
+  const result = run(dir, 'check');
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, new RegExp(`VFang version sync OK: ${fixtureVersion.replaceAll('.', '\\.')}`));
+  fs.rmSync(dir, { recursive: true });
+});
+
 test('check rejects a multiline RPM Version field', () => {
   const dir = fixture();
   const spec = path.join(dir, 'packaging/rpm/fangd.spec');

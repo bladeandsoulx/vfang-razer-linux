@@ -156,6 +156,7 @@ test('publisher creates, validates, and publishes one six-asset release', () => 
   assert.match(log, /immutable-releases/);
   assert.match(log, /releases\/latest/);
   assert.doesNotMatch(log, /--method DELETE|clobber/);
+  assert.match(result.stdout, new RegExp(`Published immutable VFang v${version.replaceAll('.', '\\.')} release`));
   fixture.cleanup();
 });
 

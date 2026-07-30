@@ -592,16 +592,16 @@ reconcile_group_membership() {
     fatal "Could not add $TARGET_USER to fang. Run: sudo usermod -aG fang $TARGET_USER"
   fi
   complete "Added $TARGET_USER to the fang group"
-  warn 'Log out and back in once before launching Fang.'
+  warn 'Log out and back in once before launching VFang.'
 }
 
 mutate_system() {
   sudo -v
   install_selected_packages
   if [[ $PACKAGE_TRANSACTION == 1 ]]; then
-    complete "Installed Fang $VERSION"
+    complete "Installed VFang $VERSION"
   else
-    complete "Fang $VERSION packages are already installed"
+    complete "VFang $VERSION packages are already installed"
   fi
   confirm_group
   reconcile_service
@@ -628,7 +628,7 @@ readonly RPM_FANGD="fangd-${VERSION}-1.x86_64.rpm"
   [[ $EUID != 0 ]] ||
     fatal 'Run this installer as your desktop user without sudo.'
   [[ $(uname -m) == x86_64 ]] ||
-    fatal 'Fang release packages support only x86_64 systems.'
+    fatal 'VFang release packages support only x86_64 systems.'
 
   capture_identity
   parse_os_release "${FANG_OS_RELEASE_FILE:-/etc/os-release}"
@@ -655,11 +655,11 @@ readonly RPM_FANGD="fangd-${VERSION}-1.x86_64.rpm"
     SELECTED_FANGD=$RPM_FANGD
   fi
 
-  step "Downloading Fang $VERSION packages..."
+  step "Downloading VFang $VERSION packages..."
   download_file "$RELEASE_BASE/SHA256SUMS" "$WORK_DIR/SHA256SUMS"
   download_file "$RELEASE_BASE/$SELECTED_FANG" "$WORK_DIR/$SELECTED_FANG"
   download_file "$RELEASE_BASE/$SELECTED_FANGD" "$WORK_DIR/$SELECTED_FANGD"
-  complete "Downloaded Fang $VERSION package pair"
+  complete "Downloaded VFang $VERSION package pair"
 
   verify_checksums
   if [[ $PACKAGE_FAMILY == deb ]]; then

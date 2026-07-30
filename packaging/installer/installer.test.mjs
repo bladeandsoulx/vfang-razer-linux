@@ -686,6 +686,20 @@ test('runs one ordered elevated phase and reconciles service and group', () => {
   fixture.cleanup();
 });
 
+test('successful install presents VFang while downloading stable asset names', () => {
+  const fixture = makeFixture({
+    osRelease: 'ID=ubuntu\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\n'
+  });
+  const result = fixture.run();
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, new RegExp(`Downloading VFang ${version.replaceAll('.', '\\.')} packages`));
+  assert.match(result.stdout, new RegExp(`Downloaded VFang ${version.replaceAll('.', '\\.')} package pair`));
+  assert.match(result.stdout, new RegExp(`Installed VFang ${version.replaceAll('.', '\\.')}`));
+  assert.match(fixture.commands(), new RegExp(`Fang_${version.replaceAll('.', '\\.')}_amd64\\.deb`));
+  assert.match(fixture.commands(), new RegExp(`fangd_${version.replaceAll('.', '\\.')}-1_amd64\\.deb`));
+  fixture.cleanup();
+});
+
 test('equal packages still repair state without a package transaction', () => {
   const fixture = makeFixture({
     osRelease: 'ID=ubuntu\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\n',

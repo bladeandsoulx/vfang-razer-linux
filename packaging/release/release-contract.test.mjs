@@ -15,6 +15,7 @@ import {
 
 const repositoryRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
 const sourceInstaller = path.join(repositoryRoot, 'packaging/install-from-source.sh');
+const read = (name) => fs.readFileSync(path.join(repositoryRoot, name), 'utf8');
 
 function runSourceFamilyGuard(osRelease) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-source-installer-test-'));
@@ -50,6 +51,21 @@ test('0.9.4 owns six exact assets and five checksum entries', () => {
     checksumNames('0.9.4'),
     releaseNames('0.9.4').filter((name) => name !== 'SHA256SUMS')
   );
+});
+
+test('0.9.7 rebrand preserves the exact six release assets', () => {
+  assert.deepEqual(releaseNames('0.9.7'), [
+    'install.sh',
+    'SHA256SUMS',
+    'Fang_0.9.7_amd64.deb',
+    'fangd_0.9.7-1_amd64.deb',
+    'fang-0.9.7-1.x86_64.rpm',
+    'fangd-0.9.7-1.x86_64.rpm'
+  ]);
+  assert.match(read('packaging/install-from-source.sh'), /building the VFang app/);
+  assert.match(read('packaging/install-from-source.sh'), /Launch 'VFang'/);
+  assert.match(read('packaging/install-from-source.sh'), /Fang_\$\{VERSION\}_amd64\.deb/);
+  assert.match(read('packaging/release/release-contract.mjs'), /Staged immutable VFang/);
 });
 
 test('manifest rejects missing, duplicate, malformed, path, and extra entries', () => {

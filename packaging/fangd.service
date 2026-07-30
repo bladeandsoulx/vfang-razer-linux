@@ -1,5 +1,5 @@
 [Unit]
-Description=Fang daemon — performance and fan control for Razer Blade laptops
+Description=VFang daemon — performance and fan control for Razer Blade laptops
 Documentation=https://github.com/bladeandsoulx/fang-razer-linux
 
 [Service]
