@@ -38,8 +38,8 @@ test('DEB verifier covers install, runtime, integrity, and removal lifecycle', (
   assert.match(source, /packaged file remains after removal/);
 });
 
-test('CI and release test one DEB pair on all four supported bases', () => {
-  const images = ['ubuntu:22.04', 'ubuntu:24.04', 'debian:12', 'debian:13'];
+test('CI and release test one DEB pair on all five supported bases', () => {
+  const images = ['ubuntu:22.04', 'ubuntu:24.04', 'ubuntu:26.04', 'debian:12', 'debian:13'];
   for (const workflow of workflows) {
     const source = fs.readFileSync(workflow, 'utf8');
     for (const image of images) assert.match(source, new RegExp(image.replace('.', '\\.')));

@@ -2,6 +2,25 @@
   // Mirrors CHANGELOG.md, condensed for the panel. Newest first.
   const RELEASES = [
     {
+      version: '0.9.6',
+      date: '2026-07-30',
+      title: 'Ubuntu 26.04 LTS',
+      groups: [
+        {
+          kind: 'Added',
+          items: [
+            'Ubuntu 26.04 LTS is a supported installation base, directly and through compatible-family derivatives.'
+          ]
+        },
+        {
+          kind: 'Fixed',
+          items: [
+            'The from-source build script now explains that it supports Debian and Ubuntu only, instead of failing part way through on other distributions.'
+          ]
+        }
+      ]
+    },
+    {
       version: '0.9.5',
       date: '2026-07-23',
       title: 'Neon Fang installer',

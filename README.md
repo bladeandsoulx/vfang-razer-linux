@@ -69,7 +69,7 @@ its own safe fan limits and feature list.
 
 Tested x86_64 Linux bases:
 
-- Ubuntu 22.04 and 24.04
+- Ubuntu 22.04, 24.04, and 26.04
 - Debian 12 and 13
 - Fedora 43 and 44
 
@@ -111,10 +111,10 @@ bash install.sh
 This lets you read the script before it asks for administrator access.
 
 For an extra integrity check, download the installer and checksum manifest from
-the pinned v0.9.5 release:
+the pinned v0.9.6 release:
 
 ```bash
-curl -fLO 'https://github.com/bladeandsoulx/fang-razer-linux/releases/download/v0.9.5/{install.sh,SHA256SUMS}'
+curl -fLO 'https://github.com/bladeandsoulx/fang-razer-linux/releases/download/v0.9.6/{install.sh,SHA256SUMS}'
 grep '  install.sh$' SHA256SUMS > install.sh.sha256
 sha256sum --check install.sh.sha256
 ```
@@ -128,10 +128,10 @@ Download both packages from the same release, then install them together:
 
 ```bash
 # Ubuntu or Debian
-sudo apt install ./fangd_0.9.5-1_amd64.deb ./Fang_0.9.5_amd64.deb
+sudo apt install ./fangd_0.9.6-1_amd64.deb ./Fang_0.9.6_amd64.deb
 
 # Fedora 43 or 44
-sudo dnf install ./fangd-0.9.5-1.x86_64.rpm ./fang-0.9.5-1.x86_64.rpm
+sudo dnf install ./fangd-0.9.6-1.x86_64.rpm ./fang-0.9.6-1.x86_64.rpm
 ```
 
 Enable the background service and give your user access:

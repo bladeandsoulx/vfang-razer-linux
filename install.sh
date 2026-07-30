@@ -207,6 +207,7 @@ detect_platform() {
       case $OS_VERSION_ID:$OS_VERSION_CODENAME in
         22.04:jammy) PACKAGE_FAMILY=deb; PLATFORM_LABEL='Ubuntu 22.04' ;;
         24.04:noble) PACKAGE_FAMILY=deb; PLATFORM_LABEL='Ubuntu 24.04' ;;
+        26.04:resolute) PACKAGE_FAMILY=deb; PLATFORM_LABEL='Ubuntu 26.04' ;;
         *) fatal "Unsupported Ubuntu release: ${OS_VERSION_ID:-unknown}." ;;
       esac
       return
@@ -240,6 +241,7 @@ detect_platform() {
     case $OS_UBUNTU_CODENAME in
       jammy) PACKAGE_FAMILY=deb; PLATFORM_LABEL='Ubuntu 22.04' ;;
       noble) PACKAGE_FAMILY=deb; PLATFORM_LABEL='Ubuntu 24.04' ;;
+      resolute) PACKAGE_FAMILY=deb; PLATFORM_LABEL='Ubuntu 26.04' ;;
       *) fatal "Unsupported or missing Ubuntu base for $OS_ID." ;;
     esac
   elif ((debian_like)); then
@@ -598,8 +600,8 @@ mutate_system() {
 main() {
 set -euo pipefail
 umask 077
-readonly VERSION='0.9.5'
-readonly RELEASE_TAG='v0.9.5'
+readonly VERSION='0.9.6'
+readonly RELEASE_TAG='v0.9.6'
 readonly REPOSITORY='bladeandsoulx/fang-razer-linux'
 readonly RELEASE_BASE="https://github.com/${REPOSITORY}/releases/download/${RELEASE_TAG}"
 readonly DEB_FANG="Fang_${VERSION}_amd64.deb"

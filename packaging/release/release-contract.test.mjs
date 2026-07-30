@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 
 import {
@@ -11,6 +12,30 @@ import {
   stageRelease,
   validateManifest
 } from './release-contract.mjs';
+
+const repositoryRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+const sourceInstaller = path.join(repositoryRoot, 'packaging/install-from-source.sh');
+
+function runSourceFamilyGuard(osRelease) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-source-installer-test-'));
+  const osReleasePath = path.join(fixtureRoot, 'os-release');
+  fs.writeFileSync(osReleasePath, osRelease);
+  try {
+    return spawnSync(
+      'bash',
+      [
+        '-c',
+        'source "$1"; source_installer_require_debian_family "$2"',
+        'fang-source-installer-test',
+        sourceInstaller,
+        osReleasePath
+      ],
+      { encoding: 'utf8' }
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true });
+  }
+}
 
 test('0.9.4 owns six exact assets and five checksum entries', () => {
   assert.deepEqual(releaseNames('0.9.4'), [
@@ -144,12 +169,36 @@ test('stageRelease rejects package metadata mismatches before staging', () => {
   fs.rmSync(root, { recursive: true });
 });
 
+test('source installer accepts valid direct and derived Debian-family os-release quoting', () => {
+  for (const osRelease of [
+    "ID='ubuntu'\n",
+    'ID="debian"\n',
+    "ID='zorin'\nID_LIKE='ubuntu debian'\n"
+  ]) {
+    const result = runSourceFamilyGuard(osRelease);
+    assert.equal(result.status, 0, osRelease + result.stdout + result.stderr);
+  }
+});
+
+test('source installer rejects malformed, duplicate, and unsupported family data', () => {
+  const marker = path.join(os.tmpdir(), `fang-source-installer-injection-${process.pid}`);
+  fs.rmSync(marker, { force: true });
+  for (const osRelease of [
+    'ID="ubuntu\n',
+    'ID=ubuntu\nID=debian\n',
+    'ID=notubuntu\n',
+    `ID="$(touch ${marker})"\n`
+  ]) {
+    const result = runSourceFamilyGuard(osRelease);
+    assert.notEqual(result.status, 0, osRelease);
+  }
+  assert.equal(fs.existsSync(marker), false);
+});
+
 test('documentation exposes release, review, integrity, manual, and source install paths', () => {
-  const repositoryRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
   const readme = fs.readFileSync(path.join(repositoryRoot, 'README.md'), 'utf8');
   const contributing = fs.readFileSync(path.join(repositoryRoot, 'CONTRIBUTING.md'), 'utf8');
   const hardware = fs.readFileSync(path.join(repositoryRoot, 'HARDWARE_TESTING.md'), 'utf8');
-  const sourceInstaller = path.join(repositoryRoot, 'packaging/install-from-source.sh');
 
   assert.equal(fs.existsSync(path.join(repositoryRoot, 'packaging/install.sh')), false);
   assert.ok(fs.statSync(sourceInstaller).mode & 0o111);
@@ -165,17 +214,17 @@ test('documentation exposes release, review, integrity, manual, and source insta
   );
   assert.match(readme, /curl -fLO .*releases\/latest\/download\/install\.sh/);
   assert.match(readme, /less install\.sh\nbash install\.sh/);
-  assert.match(readme, /releases\/download\/v0\.9\.5\/\{install\.sh,SHA256SUMS\}/);
+  assert.match(readme, /releases\/download\/v0\.9\.6\/\{install\.sh,SHA256SUMS\}/);
   assert.match(
     readme,
-    /sudo apt install \.\/fangd_0\.9\.5-1_amd64\.deb \.\/Fang_0\.9\.5_amd64\.deb/
+    /sudo apt install \.\/fangd_0\.9\.6-1_amd64\.deb \.\/Fang_0\.9\.6_amd64\.deb/
   );
   assert.match(
     readme,
-    /sudo dnf install \.\/fangd-0\.9\.5-1\.x86_64\.rpm \.\/fang-0\.9\.5-1\.x86_64\.rpm/
+    /sudo dnf install \.\/fangd-0\.9\.6-1\.x86_64\.rpm \.\/fang-0\.9\.6-1\.x86_64\.rpm/
   );
   assert.match(readme, /sha256sum --check .*install\.sh/);
-  assert.match(readme, /^- Ubuntu 22\.04 and 24\.04$/m);
+  assert.match(readme, /^- Ubuntu 22\.04, 24\.04, and 26\.04$/m);
   assert.match(readme, /^- Debian 12 and 13$/m);
   assert.match(readme, /^- Fedora 43 and 44$/m);
   assert.match(readme, /do not add `sudo`/);

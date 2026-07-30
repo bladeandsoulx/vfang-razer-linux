@@ -294,6 +294,7 @@ esac
 const directPlatforms = [
   ['Ubuntu 22.04', 'ID=ubuntu\nVERSION_ID="22.04"\nVERSION_CODENAME=jammy\n', 'DEB'],
   ['Ubuntu 24.04', 'ID=ubuntu\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\n', 'DEB'],
+  ['Ubuntu 26.04', 'ID=ubuntu\nVERSION_ID="26.04"\nVERSION_CODENAME=resolute\n', 'DEB'],
   ['Debian 12', 'ID=debian\nVERSION_ID="12"\nVERSION_CODENAME=bookworm\n', 'DEB'],
   ['Debian 13', 'ID=debian\nVERSION_ID="13"\nVERSION_CODENAME=trixie\n', 'DEB'],
   ['Fedora 43', 'ID=fedora\nVERSION_ID="43"\nPLATFORM_ID="platform:f43"\n', 'RPM'],
@@ -330,6 +331,11 @@ const derivatives = [
     'ID=pop\nID_LIKE="ubuntu debian"\nVERSION_ID="24.04"\nUBUNTU_CODENAME=noble\n'
   ],
   [
+    'zorin resolute',
+    'Ubuntu 26.04',
+    'ID=zorin\nID_LIKE="ubuntu debian"\nVERSION_ID="19"\nUBUNTU_CODENAME=resolute\n'
+  ],
+  [
     'devuan',
     'Debian 12',
     'ID=devuan\nID_LIKE=debian\nVERSION_ID="5"\nVERSION_CODENAME=bookworm\n'
@@ -341,11 +347,13 @@ const derivatives = [
   ]
 ];
 
-for (const [id, base, osRelease] of derivatives) {
-  test(`detects supported ${id} derivative`, () => {
+for (const [name, base, osRelease] of derivatives) {
+  test(`detects supported ${name} derivative`, () => {
     const fixture = makeFixture({ osRelease });
     const result = fixture.run();
     assert.equal(result.status, 0, result.stdout + result.stderr);
+    const id = /^ID=([a-z0-9._+-]+)$/m.exec(osRelease)?.[1];
+    assert.ok(id, 'derivative fixture must contain a literal unquoted ID');
     assert.match(result.stdout, new RegExp(`${id} → ${base.replace('.', '\\.')} family`));
     assert.match(result.stdout, /compatible-family, not release-tested directly/);
     fixture.cleanup();
@@ -380,7 +388,9 @@ test('refuses malformed, duplicate, unsupported, and conflicting platform data',
     'ID=ubuntu\nID=debian\nVERSION_ID="24.04"\n',
     'ID="$(touch /tmp/no)"\nVERSION_ID="24.04"\n',
     'ID=ubuntu\nVERSION_ID="26.04"\nVERSION_CODENAME=questing\n',
-    'ID=zorin\nID_LIKE="ubuntu debian"\nUBUNTU_CODENAME=questing\n',
+    'ID=ubuntu\nVERSION_ID="26.04"\n',
+    'ID=zorin\nID_LIKE="ubuntu debian"\nVERSION_ID="19"\nUBUNTU_CODENAME=questing\n',
+    'ID=zorin\nID_LIKE="ubuntu debian"\nVERSION_ID="19"\n',
     'ID=mystery\nVERSION_ID="1"\n',
     'ID=hybrid\nID_LIKE="ubuntu fedora"\nUBUNTU_CODENAME=noble\nPLATFORM_ID=platform:f44\n'
   ];
