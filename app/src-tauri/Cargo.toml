@@ -1,6 +1,6 @@
 [package]
 name = "fang"
-description = "Fang — Synapse-style control center for Razer Blade laptops on Linux"
+description = "VFang — Synapse-style control center for Razer Blade laptops on Linux"
 version = "0.9.7"
 edition = "2021"
 license = "GPL-2.0"

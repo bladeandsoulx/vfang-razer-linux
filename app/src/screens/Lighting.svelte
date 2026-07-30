@@ -203,7 +203,7 @@
       {:else if $status}
         <div class="monitor-note">
           <p class="hint">
-            No DDC/CI monitor detected yet. Fang retries automatically after boot
+            No DDC/CI monitor detected yet. VFang retries automatically after boot
             and hot-plug. Check that DDC/CI is enabled in the monitor's on-screen menu.
           </p>
           <button class="chip" disabled={rescanBusy} on:click={scanMonitor}>

@@ -4,7 +4,7 @@
       <path d="M10 8 L24 40 L27 26 L38 8 L30 8 L25 18 L19 8 Z" class="fang" />
     </svg>
     <h2>Daemon offline</h2>
-    <p>Fang can't reach <span class="mono">fangd</span>. On your Blade, run:</p>
+    <p>VFang can't reach <span class="mono">fangd</span>. On your Blade, run:</p>
     <pre class="mono">sudo systemctl enable --now fangd
 sudo usermod -aG fang $USER   # then log out/in once</pre>
     <p class="dim">Retrying automatically…</p>

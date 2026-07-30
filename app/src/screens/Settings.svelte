@@ -63,7 +63,7 @@
       checked={$uiSettings.autostart}
       on:change={(event) => save('autostart', event.target.checked)}
       label="Launch on login"
-      hint="Start Fang minimized to the tray when you sign in"
+      hint="Start VFang minimized to the tray when you sign in"
     />
     <div class="rule"></div>
     <Toggle
@@ -87,7 +87,7 @@
       <dt>device</dt>
       <dd>{$status?.model ?? '--'}</dd>
       <dt>version</dt>
-      <dd>Fang {$versionInfo.app_version || '--'} · fangd {$status?.daemon_version ?? '--'}</dd>
+      <dd>VFang {$versionInfo.app_version || '--'} · fangd {$status?.daemon_version ?? '--'}</dd>
       <dt>API</dt>
       <dd class:ok={$versionInfo.compatible} class:bad={!$versionInfo.compatible}>
         app {$versionInfo.app_api_version} · daemon {$versionInfo.daemon_api_version ?? '--'}
@@ -165,12 +165,12 @@
       <div>
         {#if updateStatus === 'checking'}
           <strong>Checking GitHub…</strong>
-          <p>Looking for the latest published Fang release.</p>
+          <p>Looking for the latest published VFang release.</p>
         {:else if updateStatus === 'current'}
-          <strong>Fang is up to date</strong>
+          <strong>VFang is up to date</strong>
           <p>v{updateInfo.latestVersion} is the latest stable release.</p>
         {:else if updateStatus === 'available'}
-          <strong>Fang v{updateInfo.latestVersion} is available</strong>
+          <strong>VFang v{updateInfo.latestVersion} is available</strong>
           <p>Open the release to download the matching app and daemon packages.</p>
         {:else if updateStatus === 'error'}
           <strong>Couldn't check for updates</strong>
@@ -203,7 +203,7 @@
   <div class="card rise pad about" style="animation-delay:120ms">
     <span class="card-label">About</span>
     <p>
-      <strong>Fang</strong> is an open-source control center for Razer Blade laptops
+      <strong>VFang</strong> is an open-source control center for Razer Blade laptops
       on Linux: performance modes, fan control and telemetry, no Windows required.
     </p>
     <p class="dim">
@@ -214,7 +214,7 @@
       by Rintastic247 (GPL-2.0) and razer-laptop-control · not affiliated with Razer Inc.
     </p>
     <p class="dim">
-      If Fang is useful to you, consider supporting Razer-Control's author:
+      If VFang is useful to you, consider supporting Razer-Control's author:
       <button
         class="link"
         on:click={() =>

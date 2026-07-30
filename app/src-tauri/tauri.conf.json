@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Fang",
+        "title": "VFang",
         "width": 1100,
         "height": 740,
         "minWidth": 880,
