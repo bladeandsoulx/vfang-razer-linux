@@ -108,7 +108,7 @@
       <button
         type="button"
         class="project-link"
-        on:click={() => openExternal('https://github.com/bladeandsoulx/fang-razer-linux')}
+        on:click={() => openExternal('https://github.com/bladeandsoulx/vfang-razer-linux')}
       >
         View the open-source project <span aria-hidden="true">↗</span>
       </button>

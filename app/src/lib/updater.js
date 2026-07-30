@@ -1,6 +1,6 @@
-const REPOSITORY = 'https://github.com/bladeandsoulx/fang-razer-linux';
+const REPOSITORY = 'https://github.com/bladeandsoulx/vfang-razer-linux';
 const LATEST_RELEASE_API =
-  'https://api.github.com/repos/bladeandsoulx/fang-razer-linux/releases/latest';
+  'https://api.github.com/repos/bladeandsoulx/vfang-razer-linux/releases/latest';
 
 function parseVersion(value) {
   const match = String(value)
@@ -30,7 +30,7 @@ function trustedReleaseUrl(value) {
     const url = new URL(value);
     if (
       url.origin === 'https://github.com' &&
-      url.pathname.startsWith('/bladeandsoulx/fang-razer-linux/releases/')
+      url.pathname.startsWith('/bladeandsoulx/vfang-razer-linux/releases/')
     ) {
       return url.href;
     }

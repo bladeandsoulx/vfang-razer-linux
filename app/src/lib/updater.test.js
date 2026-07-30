@@ -16,7 +16,7 @@ test('returns a newer published GitHub release', async () => {
     async json() {
       return {
         tag_name: 'v0.9.0',
-        html_url: 'https://github.com/bladeandsoulx/fang-razer-linux/releases/tag/v0.9.0'
+        html_url: 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/tag/v0.9.0'
       };
     }
   });
@@ -25,7 +25,7 @@ test('returns a newer published GitHub release', async () => {
     available: true,
     installedVersion: '0.8.2',
     latestVersion: '0.9.0',
-    releaseUrl: 'https://github.com/bladeandsoulx/fang-razer-linux/releases/tag/v0.9.0'
+    releaseUrl: 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/tag/v0.9.0'
   });
 });
 

@@ -6,7 +6,7 @@ Version: 0.9.6
 Release: 1
 Summary: Razer Blade control center for Linux
 License: GPL-2.0-only
-URL: https://github.com/bladeandsoulx/fang-razer-linux
+URL: https://github.com/bladeandsoulx/vfang-razer-linux
 Source0: fang
 Source1: fang.desktop
 Source2: LICENSE

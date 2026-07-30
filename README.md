@@ -1,6 +1,6 @@
 # VFang — Razer Blade Control Center for Linux
 
-[![CI](https://github.com/bladeandsoulx/fang-razer-linux/actions/workflows/ci.yml/badge.svg)](https://github.com/bladeandsoulx/fang-razer-linux/actions/workflows/ci.yml)
+[![CI](https://github.com/bladeandsoulx/vfang-razer-linux/actions/workflows/ci.yml/badge.svg)](https://github.com/bladeandsoulx/vfang-razer-linux/actions/workflows/ci.yml)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](LICENSE)
 
 **Control your Razer Blade without Windows.**
@@ -20,7 +20,7 @@ configuration identifiers for compatibility.
 > Open **Terminal**, paste this one line, and press **Enter**:
 
 ```bash
-curl -fsSL https://github.com/bladeandsoulx/fang-razer-linux/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/bladeandsoulx/vfang-razer-linux/releases/latest/download/install.sh | bash
 ```
 
 **That is it.** When installation finishes, open **Fang** from your app menu.
@@ -107,7 +107,7 @@ layer.
 <summary><strong>Check the installer before running it</strong></summary>
 
 ```bash
-curl -fLO https://github.com/bladeandsoulx/fang-razer-linux/releases/latest/download/install.sh
+curl -fLO https://github.com/bladeandsoulx/vfang-razer-linux/releases/latest/download/install.sh
 less install.sh
 bash install.sh
 ```
@@ -118,7 +118,7 @@ For an extra integrity check, download the installer and checksum manifest from
 the pinned v0.9.6 release:
 
 ```bash
-curl -fLO 'https://github.com/bladeandsoulx/fang-razer-linux/releases/download/v0.9.6/{install.sh,SHA256SUMS}'
+curl -fLO 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/download/v0.9.6/{install.sh,SHA256SUMS}'
 grep '  install.sh$' SHA256SUMS > install.sh.sha256
 sha256sum --check install.sh.sha256
 ```
@@ -154,8 +154,8 @@ Log out and back in once after adding the group. To remove VFang, run
 <summary><strong>Build from source on Ubuntu or Debian</strong></summary>
 
 ```bash
-git clone https://github.com/bladeandsoulx/fang-razer-linux
-cd fang-razer-linux
+git clone https://github.com/bladeandsoulx/vfang-razer-linux
+cd vfang-razer-linux
 sudo ./packaging/install-from-source.sh
 ```
 

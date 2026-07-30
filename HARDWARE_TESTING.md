@@ -36,7 +36,7 @@ Use the release installer on a supported x86_64 distribution. Run it as your
 desktop user, not with `sudo`:
 
 ```sh
-curl -fsSL https://github.com/bladeandsoulx/fang-razer-linux/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/bladeandsoulx/vfang-razer-linux/releases/latest/download/install.sh | bash
 ```
 
 For an Ubuntu/Debian source build instead:

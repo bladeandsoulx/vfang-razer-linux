@@ -210,7 +210,7 @@ test('documentation exposes release, review, integrity, manual, and source insta
   assert.match(readme, /open \*\*Fang\*\* from your app menu/i);
   assert.match(
     readme,
-    /curl -fsSL https:\/\/github\.com\/bladeandsoulx\/fang-razer-linux\/releases\/latest\/download\/install\.sh \| bash/
+    /curl -fsSL https:\/\/github\.com\/bladeandsoulx\/vfang-razer-linux\/releases\/latest\/download\/install\.sh \| bash/
   );
   assert.match(readme, /curl -fLO .*releases\/latest\/download\/install\.sh/);
   assert.match(readme, /less install\.sh\nbash install\.sh/);
