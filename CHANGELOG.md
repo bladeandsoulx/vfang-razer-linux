@@ -355,6 +355,8 @@ All notable changes to Fang are documented here. The format is based on
 - Privileged `fangd` daemon + unprivileged Tauri/Svelte app over a Unix socket;
   settings persist and re-apply after reboot and suspend/resume.
 
+[0.9.6]: https://github.com/bladeandsoulx/fang-razer-linux/releases/tag/v0.9.6
+[0.9.5]: https://github.com/bladeandsoulx/fang-razer-linux/releases/tag/v0.9.5
 [0.9.4]: https://github.com/bladeandsoulx/fang-razer-linux/releases/tag/v0.9.4
 [0.9.3]: https://github.com/bladeandsoulx/fang-razer-linux/releases/tag/v0.9.3
 [0.9.2]: https://github.com/bladeandsoulx/fang-razer-linux/releases/tag/v0.9.2

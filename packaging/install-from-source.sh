@@ -3,27 +3,141 @@
 # Usage: sudo ./packaging/install-from-source.sh   (run from the repo root)
 set -euo pipefail
 
+source_installer_decode_os_value() {
+    local raw=$1
+    local destination=$2
+    local decoded=
+    local inner
+    local char
+    local next
+    local index
+
+    if [[ ${raw:0:1} == '"' ]]; then
+        [[ ${#raw} -ge 2 && ${raw: -1} == '"' ]] || return 1
+        inner=${raw:1:${#raw}-2}
+        index=0
+        while ((index < ${#inner})); do
+            char=${inner:index:1}
+            if [[ $char == \\ ]]; then
+                ((index += 1))
+                ((index < ${#inner})) || return 1
+                next=${inner:index:1}
+                case $next in
+                    '$'|'`'|'"'|\\) decoded+=$next ;;
+                    *) return 1 ;;
+                esac
+            else
+                decoded+=$char
+            fi
+            ((index += 1))
+        done
+    elif [[ ${raw:0:1} == "'" ]]; then
+        [[ ${#raw} -ge 2 && ${raw: -1} == "'" ]] || return 1
+        inner=${raw:1:${#raw}-2}
+        [[ $inner != *"'"* ]] || return 1
+        decoded=$inner
+    else
+        decoded=$raw
+    fi
+    printf -v "$destination" '%s' "$decoded"
+}
+
+source_installer_valid_os_value() {
+    local key=$1
+    local value=$2
+    case $key in
+        ID) [[ $value =~ ^[a-z0-9._+-]+$ ]] ;;
+        ID_LIKE) [[ $value =~ ^[a-z0-9._+-]+([[:space:]]+[a-z0-9._+-]+)*$ ]] ;;
+        *) return 1 ;;
+    esac
+}
+
+source_installer_read_os_release() {
+    local source=$1
+    local line
+    local key
+    local raw
+    local value
+    declare -A seen=()
+
+    DISTRO_ID=
+    DISTRO_ID_LIKE=
+
+    if [[ ! -r $source ]]; then
+        echo "cannot read operating-system identity from $source" >&2
+        return 1
+    fi
+    while IFS= read -r line || [[ -n $line ]]; do
+        [[ -z $line || $line == \#* ]] && continue
+        if [[ $line != *=* ]]; then
+            echo "malformed os-release line: $line" >&2
+            return 1
+        fi
+        key=${line%%=*}
+        raw=${line#*=}
+        case $key in
+            ID|ID_LIKE) ;;
+            *) continue ;;
+        esac
+        if [[ -n ${seen[$key]+present} ]]; then
+            echo "duplicate os-release field: $key" >&2
+            return 1
+        fi
+        seen[$key]=1
+        value=
+        if ! source_installer_decode_os_value "$raw" value; then
+            echo "malformed os-release value for $key" >&2
+            return 1
+        fi
+        if ! source_installer_valid_os_value "$key" "$value"; then
+            echo "invalid os-release value for $key" >&2
+            return 1
+        fi
+        case $key in
+            ID) DISTRO_ID=$value ;;
+            ID_LIKE) DISTRO_ID_LIKE=$value ;;
+        esac
+    done < "$source"
+    if [[ -z $DISTRO_ID ]]; then
+        echo "operating-system ID is missing" >&2
+        return 1
+    fi
+}
+
+source_installer_id_like_has() {
+    local wanted=$1
+    local item
+    for item in $DISTRO_ID_LIKE; do
+        [[ $item == "$wanted" ]] && return 0
+    done
+    return 1
+}
+
+source_installer_require_debian_family() {
+    local source=${1:-/etc/os-release}
+
+    source_installer_read_os_release "$source" || return 1
+    if [[ $DISTRO_ID == debian || $DISTRO_ID == ubuntu ]] ||
+        source_installer_id_like_has debian ||
+        source_installer_id_like_has ubuntu; then
+        return 0
+    fi
+
+    echo "this script builds from source on Debian and Ubuntu only" >&2
+    echo "detected: $DISTRO_ID" >&2
+    echo "on Fedora, install the released RPMs instead - see README.md" >&2
+    return 1
+}
+
+if [[ ${BASH_SOURCE[0]} != "$0" ]]; then
+    return 0
+fi
+
 # Everything below assumes apt-get and Debian's -dev package names. Check the
 # family before asking for root, so a Fedora user gets a useful message instead
 # of a bare "apt-get: command not found" after already elevating.
 # Read os-release rather than sourcing it, matching install.sh's posture.
-if [ -r /etc/os-release ]; then
-    DISTRO_ID="$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"' | head -n 1)"
-    DISTRO_ID_LIKE="$(sed -n 's/^ID_LIKE=//p' /etc/os-release | tr -d '"' | head -n 1)"
-else
-    DISTRO_ID=
-    DISTRO_ID_LIKE=
-fi
-
-case " $DISTRO_ID $DISTRO_ID_LIKE " in
-    *" debian "* | *" ubuntu "*) ;;
-    *)
-        echo "this script builds from source on Debian and Ubuntu only" >&2
-        echo "detected: ${DISTRO_ID:-unknown}" >&2
-        echo "on Fedora, install the released RPMs instead - see README.md" >&2
-        exit 1
-        ;;
-esac
+source_installer_require_debian_family /etc/os-release || exit 1
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "run as root: sudo $0" >&2
