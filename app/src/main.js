@@ -8,7 +8,7 @@ initBridge();
 const target = document.getElementById('app');
 
 if (!target) {
-  throw new Error('Fang application root is missing');
+  throw new Error('VFang application root is missing');
 }
 
 export default mount(App, { target });

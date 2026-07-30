@@ -39,7 +39,7 @@
       <svg viewBox="0 0 48 48" width="26" height="26">
         <path d="M10 8 L24 40 L27 26 L38 8 L30 8 L25 18 L19 8 Z" class="fang" />
       </svg>
-      <span class="word">FANG</span>
+      <span class="word">VFANG</span>
     </div>
 
     <nav>
@@ -80,7 +80,7 @@
     <div class="compatibility" role="alert">
       <strong>App and daemon are incompatible.</strong>
       App API {$versionInfo.app_api_version}; daemon API
-      {$versionInfo.daemon_api_version ?? 'missing'}. Update and restart both Fang packages.
+      {$versionInfo.daemon_api_version ?? 'missing'}. Update and restart both VFang packages.
       Hardware changes are blocked until they match.
     </div>
   {/if}

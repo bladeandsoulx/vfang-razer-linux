@@ -9,9 +9,8 @@ VFang is a free, open-source Linux app for performance modes, fan curves,
 battery charging, keyboard lighting, GPU switching, displays, and live
 temperatures.
 
-VFang currently preserves the installed **Fang** application entry, the `fang`
-and `fangd` commands and packages, and existing service, group, socket, and
-configuration identifiers for compatibility.
+VFang preserves the `fang` and `fangd` commands and packages, plus the existing
+service, group, socket, and configuration identifiers for compatibility.
 
 ## Install — one command
 
@@ -23,11 +22,11 @@ configuration identifiers for compatibility.
 curl -fsSL https://github.com/bladeandsoulx/vfang-razer-linux/releases/latest/download/install.sh | bash
 ```
 
-**That is it.** When installation finishes, open **Fang** from your app menu.
+**That is it.** When installation finishes, open **VFang** from your app menu.
 
 Run the command as your normal user—do not add `sudo`. Enter your password only
 when the installer asks. If it says group access was added, log out and back in
-once, then open **Fang**.
+once, then open **VFang**.
 
 The installer chooses the correct packages for your Linux system, checks them,
 installs the app and background service together, upgrades an existing VFang
@@ -115,10 +114,10 @@ bash install.sh
 This lets you read the script before it asks for administrator access.
 
 For an extra integrity check, download the installer and checksum manifest from
-the pinned v0.9.6 release:
+the pinned v0.9.7 release:
 
 ```bash
-curl -fLO 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/download/v0.9.6/{install.sh,SHA256SUMS}'
+curl -fLO 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/download/v0.9.7/{install.sh,SHA256SUMS}'
 grep '  install.sh$' SHA256SUMS > install.sh.sha256
 sha256sum --check install.sh.sha256
 ```
@@ -132,10 +131,10 @@ Download both packages from the same release, then install them together:
 
 ```bash
 # Ubuntu or Debian
-sudo apt install ./fangd_0.9.6-1_amd64.deb ./Fang_0.9.6_amd64.deb
+sudo apt install ./fangd_0.9.7-1_amd64.deb ./Fang_0.9.7_amd64.deb
 
 # Fedora 43 or 44
-sudo dnf install ./fangd-0.9.6-1.x86_64.rpm ./fang-0.9.6-1.x86_64.rpm
+sudo dnf install ./fangd-0.9.7-1.x86_64.rpm ./fang-0.9.7-1.x86_64.rpm
 ```
 
 Enable the background service and give your user access:

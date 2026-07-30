@@ -136,8 +136,11 @@ valid_os_value() {
     ID) [[ $value =~ ^[a-z0-9._+-]+$ ]] ;;
     ID_LIKE) [[ $value =~ ^[a-z0-9._+-]+([[:space:]]+[a-z0-9._+-]+)*$ ]] ;;
     VERSION_ID) [[ $value =~ ^[A-Za-z0-9._+-]+$ ]] ;;
-    VERSION_CODENAME|UBUNTU_CODENAME) [[ $value =~ ^[a-z0-9._+-]+$ ]] ;;
+    # Fedora ships a literal VERSION_CODENAME="", so a codename may be empty. An
+    # empty codename then matches no release gate, which fails closed correctly.
+    VERSION_CODENAME|UBUNTU_CODENAME) [[ $value =~ ^[a-z0-9._+-]*$ ]] ;;
     PLATFORM_ID) [[ $value =~ ^[A-Za-z0-9:._+-]+$ ]] ;;
+    CPE_NAME) [[ $value =~ ^[A-Za-z0-9:._+/-]+$ ]] ;;
     *) return 1 ;;
   esac
 }
@@ -155,7 +158,7 @@ parse_os_release() {
   OS_VERSION_ID=
   OS_VERSION_CODENAME=
   OS_UBUNTU_CODENAME=
-  OS_PLATFORM_ID=
+  OS_CPE_NAME=
 
   [[ -r $source ]] || fatal "Cannot read operating-system identity from $source."
   while IFS= read -r line || [[ -n $line ]]; do
@@ -164,7 +167,7 @@ parse_os_release() {
     key=${line%%=*}
     raw=${line#*=}
     case $key in
-      ID|ID_LIKE|VERSION_ID|VERSION_CODENAME|UBUNTU_CODENAME|PLATFORM_ID) ;;
+      ID|ID_LIKE|VERSION_ID|VERSION_CODENAME|UBUNTU_CODENAME|PLATFORM_ID|CPE_NAME) ;;
       *) continue ;;
     esac
     [[ -z ${seen[$key]+present} ]] || fatal "Duplicate os-release field: $key"
@@ -178,7 +181,8 @@ parse_os_release() {
       VERSION_ID) OS_VERSION_ID=$value ;;
       VERSION_CODENAME) OS_VERSION_CODENAME=$value ;;
       UBUNTU_CODENAME) OS_UBUNTU_CODENAME=$value ;;
-      PLATFORM_ID) OS_PLATFORM_ID=$value ;;
+      PLATFORM_ID) : ;;
+      CPE_NAME) OS_CPE_NAME=$value ;;
     esac
   done < "$source"
   [[ -n $OS_ID ]] || fatal 'Operating-system ID is missing.'
@@ -221,9 +225,14 @@ detect_platform() {
       return
       ;;
     fedora)
-      case $OS_VERSION_ID:$OS_PLATFORM_ID in
-        43:platform:f43) PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 43' ;;
-        44:platform:f44) PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 44' ;;
+      # Fedora 43 removed PLATFORM_ID, so CPE_NAME carries the release identity.
+      # PLATFORM_ID remains parser-visible for legacy-field validation, but
+      # never participates in selecting a Fedora release.
+      case $OS_VERSION_ID:$OS_CPE_NAME in
+        43:cpe:/o:fedoraproject:fedora:43)
+          PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 43' ;;
+        44:cpe:/o:fedoraproject:fedora:44)
+          PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 44' ;;
         *) fatal "Unsupported Fedora release: ${OS_VERSION_ID:-unknown}." ;;
       esac
       return
@@ -251,9 +260,11 @@ detect_platform() {
       *) fatal "Unsupported or missing Debian base for $OS_ID." ;;
     esac
   elif ((fedora_like)); then
-    case $OS_PLATFORM_ID in
-      platform:f43) PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 43' ;;
-      platform:f44) PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 44' ;;
+    case $OS_VERSION_ID:$OS_CPE_NAME in
+      43:cpe:/o:fedoraproject:fedora:43)
+        PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 43' ;;
+      44:cpe:/o:fedoraproject:fedora:44)
+        PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 44' ;;
       *) fatal "Unsupported or missing Fedora base for $OS_ID." ;;
     esac
   else
@@ -581,16 +592,16 @@ reconcile_group_membership() {
     fatal "Could not add $TARGET_USER to fang. Run: sudo usermod -aG fang $TARGET_USER"
   fi
   complete "Added $TARGET_USER to the fang group"
-  warn 'Log out and back in once before launching Fang.'
+  warn 'Log out and back in once before launching VFang.'
 }
 
 mutate_system() {
   sudo -v
   install_selected_packages
   if [[ $PACKAGE_TRANSACTION == 1 ]]; then
-    complete "Installed Fang $VERSION"
+    complete "Installed VFang $VERSION"
   else
-    complete "Fang $VERSION packages are already installed"
+    complete "VFang $VERSION packages are already installed"
   fi
   confirm_group
   reconcile_service
@@ -600,8 +611,8 @@ mutate_system() {
 main() {
 set -euo pipefail
 umask 077
-readonly VERSION='0.9.6'
-readonly RELEASE_TAG='v0.9.6'
+readonly VERSION='0.9.7'
+readonly RELEASE_TAG='v0.9.7'
 readonly REPOSITORY='bladeandsoulx/vfang-razer-linux'
 readonly RELEASE_BASE="https://github.com/${REPOSITORY}/releases/download/${RELEASE_TAG}"
 readonly DEB_FANG="Fang_${VERSION}_amd64.deb"
@@ -617,7 +628,7 @@ readonly RPM_FANGD="fangd-${VERSION}-1.x86_64.rpm"
   [[ $EUID != 0 ]] ||
     fatal 'Run this installer as your desktop user without sudo.'
   [[ $(uname -m) == x86_64 ]] ||
-    fatal 'Fang release packages support only x86_64 systems.'
+    fatal 'VFang release packages support only x86_64 systems.'
 
   capture_identity
   parse_os_release "${FANG_OS_RELEASE_FILE:-/etc/os-release}"
@@ -644,11 +655,11 @@ readonly RPM_FANGD="fangd-${VERSION}-1.x86_64.rpm"
     SELECTED_FANGD=$RPM_FANGD
   fi
 
-  step "Downloading Fang $VERSION packages..."
+  step "Downloading VFang $VERSION packages..."
   download_file "$RELEASE_BASE/SHA256SUMS" "$WORK_DIR/SHA256SUMS"
   download_file "$RELEASE_BASE/$SELECTED_FANG" "$WORK_DIR/$SELECTED_FANG"
   download_file "$RELEASE_BASE/$SELECTED_FANGD" "$WORK_DIR/$SELECTED_FANGD"
-  complete "Downloaded Fang $VERSION package pair"
+  complete "Downloaded VFang $VERSION package pair"
 
   verify_checksums
   if [[ $PACKAGE_FAMILY == deb ]]; then

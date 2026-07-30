@@ -1,0 +1,5 @@
+VERSION_ID="26.04"
+VERSION_CODENAME=resolute
+ID=ubuntu
+ID_LIKE=debian
+UBUNTU_CODENAME=resolute

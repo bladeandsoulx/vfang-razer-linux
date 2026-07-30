@@ -186,7 +186,7 @@ main() {
     -H 'X-GitHub-Api-Version: 2026-03-10' \
     "$API/releases/latest" > "$PUBLICATION_TEMPORARY/latest.json"
   validate_release_json "$PUBLICATION_TEMPORARY/latest.json" published
-  printf 'Published immutable Fang %s release with six verified assets.\n' "$TAG"
+  printf 'Published immutable VFang %s release with six verified assets.\n' "$TAG"
 }
 
 main "$@"

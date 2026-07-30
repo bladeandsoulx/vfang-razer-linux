@@ -7,7 +7,7 @@ function parseVersion(value) {
     .trim()
     .match(/^v?(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?$/);
 
-  if (!match) throw new Error(`invalid Fang version: ${value}`);
+  if (!match) throw new Error(`invalid VFang version: ${value}`);
 
   return {
     version: `${match[1]}.${match[2]}.${match[3]}`,

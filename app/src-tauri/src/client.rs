@@ -44,10 +44,10 @@ impl Client {
             let daemon = self.daemon_api_version.load(Ordering::Relaxed);
             if daemon != API_VERSION {
                 return Err(if daemon == 0 {
-                    "daemon API is unknown or outdated; update/restart both Fang packages".into()
+                    "daemon API is unknown or outdated; update/restart both VFang packages".into()
                 } else {
                     format!(
-                        "incompatible Fang API: app {API_VERSION}, daemon {daemon}; update both packages"
+                        "incompatible VFang API: app {API_VERSION}, daemon {daemon}; update both packages"
                     )
                 });
             }

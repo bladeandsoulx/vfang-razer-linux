@@ -177,7 +177,7 @@ function main(args) {
   }
   const [, version, debDir, rpmDir, outputDir, installer] = args;
   stageRelease({ version, debDir, rpmDir, outputDir, installer });
-  console.log(`Staged immutable Fang v${version} release in ${outputDir}`);
+  console.log(`Staged immutable VFang v${version} release in ${outputDir}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

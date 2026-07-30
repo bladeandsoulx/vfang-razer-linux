@@ -40,3 +40,31 @@ test('sysusers and desktop files expose the required identities', () => {
   assert.match(desktop, /^Icon=fang$/m);
   assert.match(desktop, /^Terminal=false$/m);
 });
+
+test('packaging presents VFang while retaining every technical identity', () => {
+  const config = JSON.parse(read('app/src-tauri/tauri.conf.json'));
+  assert.equal(config.productName, 'Fang');
+  assert.equal(config.identifier, 'dev.fang.app');
+  assert.equal(config.bundle.linux.deb.desktopTemplate, 'vfang.desktop');
+  assert.deepEqual(config.bundle.linux.deb.depends, [
+    'fangd (>= 0.9.7)',
+    'fangd (<< 0.10.0)'
+  ]);
+
+  const debDesktop = read('app/src-tauri/vfang.desktop');
+  assert.match(debDesktop, /^Name=VFang$/m);
+  assert.match(debDesktop, /^Exec=\{\{exec\}\}$/m);
+  assert.match(debDesktop, /^Icon=\{\{icon\}\}$/m);
+
+  const rpmDesktop = read('packaging/rpm/fang.desktop');
+  assert.match(rpmDesktop, /^Name=VFang$/m);
+  assert.match(rpmDesktop, /^Exec=fang$/m);
+  assert.match(rpmDesktop, /^Icon=fang$/m);
+
+  const appSpec = read('packaging/rpm/fang.spec');
+  const daemonSpec = read('packaging/rpm/fangd.spec');
+  assert.match(appSpec, /^Name:\s*fang$/m);
+  assert.match(daemonSpec, /^Name:\s*fangd$/m);
+  assert.match(daemonSpec, /^Summary:.*VFang$/m);
+  assert.match(read('packaging/fangd.service'), /^Description=VFang daemon/m);
+});

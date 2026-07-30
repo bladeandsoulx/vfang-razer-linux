@@ -100,10 +100,10 @@
   <div class="hero card rise">
     <div class="hero-copy">
       <span class="eyebrow mono">Community powered · independent · open source</span>
-      <h2>Help Fang grow beyond laptop control.</h2>
+      <h2>Help VFang grow beyond laptop control.</h2>
       <p>
         Donations support development time, hardware testing and new features while
-        keeping Fang private, lightweight and useful without mandatory online services.
+        keeping VFang private, lightweight and useful without mandatory online services.
       </p>
       <button
         type="button"
@@ -122,7 +122,7 @@
   <div class="section-head rise" style="animation-delay:60ms">
     <div>
       <span class="card-label">Donate crypto</span>
-      <h3>Fang creator wallets</h3>
+      <h3>VFang creator wallets</h3>
     </div>
     <p>Every contribution helps fund the next round of development and testing.</p>
   </div>
@@ -134,7 +134,7 @@
       <p>
         Please do not donate if you are a student, living paycheck to paycheck,
         or working hard just to cover essential costs. Only donate money you can
-        comfortably spare. Using, sharing or contributing to Fang is already support.
+        comfortably spare. Using, sharing or contributing to VFang is already support.
       </p>
     </div>
   </div>
@@ -181,7 +181,7 @@
         <span class="planned mono">Future direction</span>
       </div>
       <p>
-        Fang could grow to recognize and configure external Razer devices connected
+        VFang could grow to recognize and configure external Razer devices connected
         to the laptop, with profiles, lighting and device-specific settings.
       </p>
     </div>

@@ -76,7 +76,7 @@ parked at idle is normal).
 
 ## 4. Performance mode switch
 
-In the **Fang** app (or via socket): switch Balanced → Gaming. Under a CPU load
+In the **VFang** app (or via socket): switch Balanced → Gaming. Under a CPU load
 (`stress-ng --cpu 8` for a minute), Gaming should hold noticeably higher
 package power / clocks than Silent. Check `journalctl -u fangd` for EC
 errors after each switch — there should be none.

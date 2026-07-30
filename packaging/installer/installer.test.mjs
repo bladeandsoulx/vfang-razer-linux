@@ -297,8 +297,18 @@ const directPlatforms = [
   ['Ubuntu 26.04', 'ID=ubuntu\nVERSION_ID="26.04"\nVERSION_CODENAME=resolute\n', 'DEB'],
   ['Debian 12', 'ID=debian\nVERSION_ID="12"\nVERSION_CODENAME=bookworm\n', 'DEB'],
   ['Debian 13', 'ID=debian\nVERSION_ID="13"\nVERSION_CODENAME=trixie\n', 'DEB'],
-  ['Fedora 43', 'ID=fedora\nVERSION_ID="43"\nPLATFORM_ID="platform:f43"\n', 'RPM'],
-  ['Fedora 44', 'ID=fedora\nVERSION_ID="44"\nPLATFORM_ID="platform:f44"\n', 'RPM']
+  // Fedora 43 removed PLATFORM_ID and ships an empty VERSION_CODENAME. These
+  // mirror the real /etc/os-release from the fedora:43 and fedora:44 images.
+  [
+    'Fedora 43',
+    'ID=fedora\nVERSION_ID=43\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:43"\n',
+    'RPM'
+  ],
+  [
+    'Fedora 44',
+    'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n',
+    'RPM'
+  ]
 ];
 
 for (const [label, osRelease, family] of directPlatforms) {
@@ -340,10 +350,17 @@ const derivatives = [
     'Debian 12',
     'ID=devuan\nID_LIKE=debian\nVERSION_ID="5"\nVERSION_CODENAME=bookworm\n'
   ],
+  // Synthetic compatibility probes cover both exact supported Fedora identity
+  // pairs without representing any real derivative distribution's os-release.
   [
-    'ultramarine',
+    'fedora-remix-44',
     'Fedora 44',
-    'ID=ultramarine\nID_LIKE="fedora"\nVERSION_ID="40"\nPLATFORM_ID="platform:f44"\n'
+    'ID=fedora-remix-44\nID_LIKE="fedora"\nVERSION_ID="44"\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'
+  ],
+  [
+    'fedora-remix-43',
+    'Fedora 43',
+    'ID=fedora-remix-43\nID_LIKE="fedora"\nVERSION_ID="43"\nCPE_NAME="cpe:/o:fedoraproject:fedora:43"\n'
   ]
 ];
 
@@ -359,6 +376,81 @@ for (const [name, base, osRelease] of derivatives) {
     fixture.cleanup();
   });
 }
+
+test('refuses Fedora identities that rely only on the retired PLATFORM_ID pairing', () => {
+  for (const osRelease of [
+    'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nPLATFORM_ID="platform:f44"\n',
+    'ID=fedora-remix-44\nID_LIKE="fedora"\nVERSION_ID="40"\nPLATFORM_ID="platform:f44"\n'
+  ]) {
+    const fixture = makeFixture({ osRelease });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0, osRelease);
+    assert.doesNotMatch(fixture.commands(), /^sudo /m);
+    fixture.cleanup();
+  }
+});
+
+test('Fedora derivatives require an exact VERSION_ID:CPE_NAME pair before download or sudo', () => {
+  const cases = [
+    ['missing both identity fields', ''],
+    ['bare VERSION_ID', 'VERSION_ID="44"\n'],
+    ['bare CPE_NAME', 'CPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'],
+    [
+      'unsupported VERSION_ID with a supported CPE_NAME',
+      'VERSION_ID="40"\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'
+    ],
+    [
+      'Fedora 43 VERSION_ID with Fedora 44 CPE_NAME',
+      'VERSION_ID="43"\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n'
+    ],
+    [
+      'Fedora 44 VERSION_ID with Fedora 43 CPE_NAME',
+      'VERSION_ID="44"\nCPE_NAME="cpe:/o:fedoraproject:fedora:43"\n'
+    ]
+  ];
+
+  for (const [label, fields] of cases) {
+    const fixture = makeFixture({
+      osRelease: `ID=fedora-remix\nID_LIKE="fedora"\n${fields}`
+    });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0, label);
+    const commands = fixture.commands();
+    assert.doesNotMatch(commands, /^curl /m, label);
+    assert.doesNotMatch(commands, /^sudo /m, label);
+    fixture.cleanup();
+  }
+});
+
+// Every image in CI's deb-test and rpm-test matrices contributes the real
+// parser-visible fields of its /etc/os-release. Detection is asserted against
+// that captured content here, and a CI step re-derives the same projection
+// inside each container so the copies cannot drift from upstream unnoticed.
+// Fedora 43 removing PLATFORM_ID went unnoticed precisely because only
+// hand-written fixtures existed.
+const realOsReleaseDir = path.join(root, 'packaging/installer/os-release');
+
+test('detection accepts the real os-release of every tested image', () => {
+  const files = fs.readdirSync(realOsReleaseDir).sort();
+  assert.ok(files.length >= 7, 'captured os-release projections are missing');
+
+  for (const file of files) {
+    const [distro, release] = file.split('-');
+    assert.ok(distro && release, `unparseable capture name: ${file}`);
+    const label = `${distro[0].toUpperCase()}${distro.slice(1)} ${release}`;
+    const osRelease = fs.readFileSync(path.join(realOsReleaseDir, file), 'utf8');
+
+    const fixture = makeFixture({ osRelease });
+    const result = fixture.run();
+    assert.equal(result.status, 0, `${file}\n${result.stdout}${result.stderr}`);
+    assert.match(
+      result.stdout,
+      new RegExp(`Detected: linux \\(${label.replace('.', '\\.')}\\)`)
+    );
+    assert.match(fixture.commands(), distro === 'fedora' ? /\.rpm/ : /\.deb/);
+    fixture.cleanup();
+  }
+});
 
 test('refuses root by an unoverrideable EUID check', () => {
   const source = fs.readFileSync(installer, 'utf8');
@@ -392,7 +484,11 @@ test('refuses malformed, duplicate, unsupported, and conflicting platform data',
     'ID=zorin\nID_LIKE="ubuntu debian"\nVERSION_ID="19"\nUBUNTU_CODENAME=questing\n',
     'ID=zorin\nID_LIKE="ubuntu debian"\nVERSION_ID="19"\n',
     'ID=mystery\nVERSION_ID="1"\n',
-    'ID=hybrid\nID_LIKE="ubuntu fedora"\nUBUNTU_CODENAME=noble\nPLATFORM_ID=platform:f44\n'
+    'ID=hybrid\nID_LIKE="ubuntu fedora"\nUBUNTU_CODENAME=noble\nPLATFORM_ID=platform:f44\n',
+    // A Fedora VERSION_ID alone must not satisfy the gate, and a VERSION_ID
+    // paired with a CPE_NAME for a different release must not either.
+    'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\n',
+    'ID=fedora\nVERSION_ID=44\nCPE_NAME="cpe:/o:fedoraproject:fedora:43"\n'
   ];
   for (const osRelease of cases) {
     const fixture = makeFixture({ osRelease });
@@ -445,7 +541,7 @@ test('rejects a wrong checksum for every selected package before sudo', () => {
       [`Fang_${version}_amd64.deb`, `fangd_${version}-1_amd64.deb`]
     ],
     [
-      'ID=fedora\nVERSION_ID="44"\nPLATFORM_ID="platform:f44"\n',
+      'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n',
       [`fang-${version}-1.x86_64.rpm`, `fangd-${version}-1.x86_64.rpm`]
     ]
   ]) {
@@ -497,7 +593,7 @@ test('rejects every wrong RPM metadata field before sudo', () => {
   ];
   for (const metadata of cases) {
     const fixture = makeFixture({
-      osRelease: 'ID=fedora\nVERSION_ID="44"\nPLATFORM_ID="platform:f44"\n',
+      osRelease: 'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n',
       metadata
     });
     const result = fixture.run();
@@ -553,7 +649,7 @@ test('DEB installed-version policy rejects downgrades and keeps one pair transac
 });
 
 test('RPM installed-version policy uses EVR and rejects ambiguous records', () => {
-  const osRelease = 'ID=fedora\nVERSION_ID="44"\nPLATFORM_ID="platform:f44"\n';
+  const osRelease = 'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n';
   for (const installed of [
     { fang: '', fangd: '' },
     { fang: '0:0.9.3-1', fangd: `0:${version}-1` },
@@ -622,6 +718,20 @@ test('runs one ordered elevated phase and reconciles service and group', () => {
   fixture.cleanup();
 });
 
+test('successful install presents VFang while downloading stable asset names', () => {
+  const fixture = makeFixture({
+    osRelease: 'ID=ubuntu\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\n'
+  });
+  const result = fixture.run();
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, new RegExp(`Downloading VFang ${version.replaceAll('.', '\\.')} packages`));
+  assert.match(result.stdout, new RegExp(`Downloaded VFang ${version.replaceAll('.', '\\.')} package pair`));
+  assert.match(result.stdout, new RegExp(`Installed VFang ${version.replaceAll('.', '\\.')}`));
+  assert.match(fixture.commands(), new RegExp(`Fang_${version.replaceAll('.', '\\.')}_amd64\\.deb`));
+  assert.match(fixture.commands(), new RegExp(`fangd_${version.replaceAll('.', '\\.')}-1_amd64\\.deb`));
+  fixture.cleanup();
+});
+
 test('equal packages still repair state without a package transaction', () => {
   const fixture = makeFixture({
     osRelease: 'ID=ubuntu\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\n',
@@ -640,7 +750,7 @@ test('equal packages still repair state without a package transaction', () => {
 
 test('missing group and failed service are fatal with bounded diagnostics', () => {
   const missingGroup = makeFixture({
-    osRelease: 'ID=fedora\nVERSION_ID="44"\nPLATFORM_ID="platform:f44"\n',
+    osRelease: 'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n',
     groupExists: false
   });
   const missingResult = missingGroup.run();

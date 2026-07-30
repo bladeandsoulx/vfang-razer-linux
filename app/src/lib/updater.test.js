@@ -72,6 +72,6 @@ test('rejects failed and malformed release responses', async () => {
         return { tag_name: 'latest' };
       }
     })),
-    /invalid Fang version/
+    /invalid VFang version/
   );
 });

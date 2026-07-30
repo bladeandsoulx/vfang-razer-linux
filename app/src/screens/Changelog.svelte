@@ -2,6 +2,31 @@
   // Mirrors CHANGELOG.md, condensed for the panel. Newest first.
   const RELEASES = [
     {
+      version: '0.9.7',
+      date: '2026-07-30',
+      title: 'VFang rebrand and Fedora detection repair',
+      groups: [
+        {
+          kind: 'Changed',
+          items: [
+            'The user-facing product is renamed to VFang. Package names, executables, service and IPC identities, repository links, and release filenames remain unchanged so existing installations upgrade in place.'
+          ]
+        },
+        {
+          kind: 'Fixed',
+          items: [
+            'VFang installs on Fedora 43 and 44 again; both were rejected before anything downloaded because Fedora removed the release field the installer checked.'
+          ]
+        },
+        {
+          kind: 'Added',
+          items: [
+            'Installer detection is tested against the real system identity of every Ubuntu, Debian, and Fedora release VFang supports.'
+          ]
+        }
+      ]
+    },
+    {
       version: '0.9.6',
       date: '2026-07-30',
       title: 'Ubuntu 26.04 LTS',

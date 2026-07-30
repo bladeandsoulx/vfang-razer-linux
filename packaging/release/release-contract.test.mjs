@@ -15,6 +15,7 @@ import {
 
 const repositoryRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
 const sourceInstaller = path.join(repositoryRoot, 'packaging/install-from-source.sh');
+const read = (name) => fs.readFileSync(path.join(repositoryRoot, name), 'utf8');
 
 function runSourceFamilyGuard(osRelease) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-source-installer-test-'));
@@ -50,6 +51,21 @@ test('0.9.4 owns six exact assets and five checksum entries', () => {
     checksumNames('0.9.4'),
     releaseNames('0.9.4').filter((name) => name !== 'SHA256SUMS')
   );
+});
+
+test('0.9.7 rebrand preserves the exact six release assets', () => {
+  assert.deepEqual(releaseNames('0.9.7'), [
+    'install.sh',
+    'SHA256SUMS',
+    'Fang_0.9.7_amd64.deb',
+    'fangd_0.9.7-1_amd64.deb',
+    'fang-0.9.7-1.x86_64.rpm',
+    'fangd-0.9.7-1.x86_64.rpm'
+  ]);
+  assert.match(read('packaging/install-from-source.sh'), /building the VFang app/);
+  assert.match(read('packaging/install-from-source.sh'), /Launch 'VFang'/);
+  assert.match(read('packaging/install-from-source.sh'), /Fang_\$\{VERSION\}_amd64\.deb/);
+  assert.match(read('packaging/release/release-contract.mjs'), /Staged immutable VFang/);
 });
 
 test('manifest rejects missing, duplicate, malformed, path, and extra entries', () => {
@@ -207,21 +223,21 @@ test('documentation exposes release, review, integrity, manual, and source insta
     readme,
     /Open \*\*Terminal\*\*, paste this one line, and press \*\*Enter\*\*:/
   );
-  assert.match(readme, /open \*\*Fang\*\* from your app menu/i);
+  assert.match(readme, /open \*\*VFang\*\* from your app menu/i);
   assert.match(
     readme,
     /curl -fsSL https:\/\/github\.com\/bladeandsoulx\/vfang-razer-linux\/releases\/latest\/download\/install\.sh \| bash/
   );
   assert.match(readme, /curl -fLO .*releases\/latest\/download\/install\.sh/);
   assert.match(readme, /less install\.sh\nbash install\.sh/);
-  assert.match(readme, /releases\/download\/v0\.9\.6\/\{install\.sh,SHA256SUMS\}/);
+  assert.match(readme, /releases\/download\/v0\.9\.7\/\{install\.sh,SHA256SUMS\}/);
   assert.match(
     readme,
-    /sudo apt install \.\/fangd_0\.9\.6-1_amd64\.deb \.\/Fang_0\.9\.6_amd64\.deb/
+    /sudo apt install \.\/fangd_0\.9\.7-1_amd64\.deb \.\/Fang_0\.9\.7_amd64\.deb/
   );
   assert.match(
     readme,
-    /sudo dnf install \.\/fangd-0\.9\.6-1\.x86_64\.rpm \.\/fang-0\.9\.6-1\.x86_64\.rpm/
+    /sudo dnf install \.\/fangd-0\.9\.7-1\.x86_64\.rpm \.\/fang-0\.9\.7-1\.x86_64\.rpm/
   );
   assert.match(readme, /sha256sum --check .*install\.sh/);
   assert.match(readme, /^- Ubuntu 22\.04, 24\.04, and 26\.04$/m);
@@ -232,6 +248,43 @@ test('documentation exposes release, review, integrity, manual, and source insta
   assert.match(readme, /Install release packages manually/);
   assert.match(readme, /packaging\/install-from-source\.sh/);
   assert.match(contributing, /IMMUTABLE_RELEASES_TOKEN/);
+  for (const [name, content] of [
+    ['README.md', readme],
+    ['CONTRIBUTING.md', contributing],
+    ['HARDWARE_TESTING.md', hardware]
+  ]) {
+    assert.match(content, /\bVFang\b/, name);
+    assert.doesNotMatch(content, /\bFang\b/, name);
+  }
+  assert.match(readme, /Fang_0\.9\.7_amd64\.deb/);
+  assert.match(readme, /bladeandsoulx\/vfang-razer-linux/);
   assert.match(contributing, /read-only.*Administration|Administration.*read-only/is);
   assert.match(hardware, /packaging\/install-from-source\.sh/);
+});
+
+// core.fileMode is false here, so a lost exec bit is invisible locally: the file
+// stays 775 on disk while the tree records 100644, and only a fresh checkout -
+// CI - fails, with a bare "Permission denied" from whichever workflow step runs
+// the script directly. Assert the recorded mode so it fails for whoever drops it.
+test('every tracked shell script is recorded executable', () => {
+  const listed = spawnSync('git', ['ls-files', '-s', '-z', '--', '*.sh'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8'
+  });
+  assert.equal(listed.status, 0, listed.stderr);
+
+  const entries = listed.stdout
+    .split('\0')
+    .filter(Boolean)
+    .map((record) => {
+      const [meta, file] = record.split('\t');
+      return { file, mode: meta.split(' ')[0] };
+    });
+
+  assert.ok(entries.length >= 7, `expected the packaging scripts, saw ${entries.length}`);
+  assert.deepEqual(
+    entries.filter(({ mode }) => mode !== '100755'),
+    [],
+    'these scripts are not recorded executable; fix with git update-index --chmod=+x'
+  );
 });

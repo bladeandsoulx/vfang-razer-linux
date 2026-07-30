@@ -189,7 +189,7 @@ echo "==> installing $FANGD_DEB"
 apt-get install -y "$FANGD_DEB"
 echo "==> fangd running: $(systemctl is-active fangd)"
 
-echo "==> building the Fang app (Tauri)"
+echo "==> building the VFang app (Tauri)"
 cd "$REPO_ROOT/app"
 run_user npm install
 run_user npm run tauri build
@@ -204,5 +204,5 @@ if [ "$REAL_USER" != "root" ]; then
 fi
 
 echo
-echo "Done. Launch 'Fang' from your app menu."
+echo "Done. Launch 'VFang' from your app menu."
 echo "Daemon logs: journalctl -u fangd -f"

@@ -314,19 +314,19 @@ fn show_main_window(app: &AppHandle) {
 fn notify_already_running(app: &AppHandle) {
     show_main_window(app);
     app.dialog()
-        .message("Fang is already running. The existing window has been brought to the front.")
-        .title("Fang is already open")
+        .message("VFang is already running. The existing window has been brought to the front.")
+        .title("VFang is already open")
         .kind(MessageDialogKind::Info)
         .buttons(MessageDialogButtons::Ok)
         .show(|_| {});
 }
 
 fn build_tray(app: &AppHandle) -> tauri::Result<()> {
-    let open = MenuItem::with_id(app, "open", "Open Fang", true, None::<&str>)?;
+    let open = MenuItem::with_id(app, "open", "Open VFang", true, None::<&str>)?;
     let silent = MenuItem::with_id(app, "mode:silent", "Silent", true, None::<&str>)?;
     let balanced = MenuItem::with_id(app, "mode:balanced", "Balanced", true, None::<&str>)?;
     let gaming = MenuItem::with_id(app, "mode:gaming", "Gaming", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit Fang", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit VFang", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[
@@ -342,7 +342,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
 
     TrayIconBuilder::with_id("fang")
         .icon(app.default_window_icon().expect("bundled icon").clone())
-        .tooltip("Fang")
+        .tooltip("VFang")
         .menu(&menu)
         .on_menu_event(|app, event| {
             let id = event.id.as_ref();
@@ -459,7 +459,7 @@ fn main() {
             set_ui_settings
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Fang");
+        .expect("error while running VFang");
 }
 
 #[cfg(test)]
