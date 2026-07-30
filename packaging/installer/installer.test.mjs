@@ -297,8 +297,18 @@ const directPlatforms = [
   ['Ubuntu 26.04', 'ID=ubuntu\nVERSION_ID="26.04"\nVERSION_CODENAME=resolute\n', 'DEB'],
   ['Debian 12', 'ID=debian\nVERSION_ID="12"\nVERSION_CODENAME=bookworm\n', 'DEB'],
   ['Debian 13', 'ID=debian\nVERSION_ID="13"\nVERSION_CODENAME=trixie\n', 'DEB'],
-  ['Fedora 43', 'ID=fedora\nVERSION_ID="43"\nPLATFORM_ID="platform:f43"\n', 'RPM'],
-  ['Fedora 44', 'ID=fedora\nVERSION_ID="44"\nPLATFORM_ID="platform:f44"\n', 'RPM']
+  // Fedora 43 removed PLATFORM_ID and ships an empty VERSION_CODENAME. These
+  // mirror the real /etc/os-release from the fedora:43 and fedora:44 images.
+  [
+    'Fedora 43',
+    'ID=fedora\nVERSION_ID=43\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:43"\n',
+    'RPM'
+  ],
+  [
+    'Fedora 44',
+    'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n',
+    'RPM'
+  ]
 ];
 
 for (const [label, osRelease, family] of directPlatforms) {
@@ -344,6 +354,13 @@ const derivatives = [
     'ultramarine',
     'Fedora 44',
     'ID=ultramarine\nID_LIKE="fedora"\nVERSION_ID="40"\nPLATFORM_ID="platform:f44"\n'
+  ],
+  // Current Fedora derivatives carry CPE_NAME; ultramarine above keeps the
+  // retired PLATFORM_ID path covered for derivatives still on Fedora <= 42.
+  [
+    'nobara',
+    'Fedora 43',
+    'ID=nobara\nID_LIKE="fedora"\nVERSION_ID="43"\nCPE_NAME="cpe:/o:fedoraproject:fedora:43"\n'
   ]
 ];
 
@@ -392,7 +409,11 @@ test('refuses malformed, duplicate, unsupported, and conflicting platform data',
     'ID=zorin\nID_LIKE="ubuntu debian"\nVERSION_ID="19"\nUBUNTU_CODENAME=questing\n',
     'ID=zorin\nID_LIKE="ubuntu debian"\nVERSION_ID="19"\n',
     'ID=mystery\nVERSION_ID="1"\n',
-    'ID=hybrid\nID_LIKE="ubuntu fedora"\nUBUNTU_CODENAME=noble\nPLATFORM_ID=platform:f44\n'
+    'ID=hybrid\nID_LIKE="ubuntu fedora"\nUBUNTU_CODENAME=noble\nPLATFORM_ID=platform:f44\n',
+    // A Fedora VERSION_ID alone must not satisfy the gate, and a VERSION_ID
+    // paired with a CPE_NAME for a different release must not either.
+    'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\n',
+    'ID=fedora\nVERSION_ID=44\nCPE_NAME="cpe:/o:fedoraproject:fedora:43"\n'
   ];
   for (const osRelease of cases) {
     const fixture = makeFixture({ osRelease });
@@ -445,7 +466,7 @@ test('rejects a wrong checksum for every selected package before sudo', () => {
       [`Fang_${version}_amd64.deb`, `fangd_${version}-1_amd64.deb`]
     ],
     [
-      'ID=fedora\nVERSION_ID="44"\nPLATFORM_ID="platform:f44"\n',
+      'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n',
       [`fang-${version}-1.x86_64.rpm`, `fangd-${version}-1.x86_64.rpm`]
     ]
   ]) {
@@ -497,7 +518,7 @@ test('rejects every wrong RPM metadata field before sudo', () => {
   ];
   for (const metadata of cases) {
     const fixture = makeFixture({
-      osRelease: 'ID=fedora\nVERSION_ID="44"\nPLATFORM_ID="platform:f44"\n',
+      osRelease: 'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n',
       metadata
     });
     const result = fixture.run();
@@ -553,7 +574,7 @@ test('DEB installed-version policy rejects downgrades and keeps one pair transac
 });
 
 test('RPM installed-version policy uses EVR and rejects ambiguous records', () => {
-  const osRelease = 'ID=fedora\nVERSION_ID="44"\nPLATFORM_ID="platform:f44"\n';
+  const osRelease = 'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n';
   for (const installed of [
     { fang: '', fangd: '' },
     { fang: '0:0.9.3-1', fangd: `0:${version}-1` },
@@ -640,7 +661,7 @@ test('equal packages still repair state without a package transaction', () => {
 
 test('missing group and failed service are fatal with bounded diagnostics', () => {
   const missingGroup = makeFixture({
-    osRelease: 'ID=fedora\nVERSION_ID="44"\nPLATFORM_ID="platform:f44"\n',
+    osRelease: 'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n',
     groupExists: false
   });
   const missingResult = missingGroup.run();
