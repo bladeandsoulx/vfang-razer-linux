@@ -5,7 +5,7 @@ Version: 0.9.6
 Release: 1
 Summary: Privileged hardware-control daemon for Fang
 License: GPL-2.0-only
-URL: https://github.com/bladeandsoulx/fang-razer-linux
+URL: https://github.com/bladeandsoulx/vfang-razer-linux
 Source0: fangd
 Source1: fangd.service
 Source2: fang.sysusers

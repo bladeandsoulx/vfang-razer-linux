@@ -1,6 +1,6 @@
 # First run on real hardware (Razer Blade, Ubuntu or Fedora)
 
-Fang's EC packet layer is byte-verified against razer-laptop-control, but
+VFang's EC packet layer is byte-verified against razer-laptop-control, but
 this checklist is for the first boot on a physical Blade. Work through it in
 order; each step has a rollback.
 
@@ -14,7 +14,7 @@ echo "${XDG_SESSION_TYPE:-?}"   # record Wayland or X11
 getenforce 2>/dev/null || true  # Fedora: record enforcing/permissive/disabled
 ```
 
-Fang recognizes the PIDs in `crates/fang-protocol/src/models.rs`. An unknown
+VFang recognizes the PIDs in `crates/fang-protocol/src/models.rs`. An unknown
 Razer PID is monitor-only by default, even when it exposes a vendor HID usage
 page. Add the PID and verified limits to the model table before treating it as
 supported. For controlled bring-up only, explicitly approve that exact PID:
@@ -36,7 +36,7 @@ Use the release installer on a supported x86_64 distribution. Run it as your
 desktop user, not with `sudo`:
 
 ```sh
-curl -fsSL https://github.com/bladeandsoulx/fang-razer-linux/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/bladeandsoulx/vfang-razer-linux/releases/latest/download/install.sh | bash
 ```
 
 For an Ubuntu/Debian source build instead:
@@ -76,7 +76,7 @@ parked at idle is normal).
 
 ## 4. Performance mode switch
 
-In the Fang app (or via socket): switch Balanced → Gaming. Under a CPU load
+In the **Fang** app (or via socket): switch Balanced → Gaming. Under a CPU load
 (`stress-ng --cpu 8` for a minute), Gaming should hold noticeably higher
 package power / clocks than Silent. Check `journalctl -u fangd` for EC
 errors after each switch — there should be none.
@@ -167,6 +167,6 @@ settings to firmware defaults. To remove everything:
 
 Open an issue with: model + year, distribution + version, desktop + Wayland/X11
 session, `lsusb -d 1532:` output, `journalctl -u fangd -b` snippet, and which
-steps passed or failed. On Fedora, also include `getenforce` and any Fang-related
+steps passed or failed. On Fedora, also include `getenforce` and any VFang-related
 `ausearch -m AVC -ts recent` denials. This is enough to distinguish packaging,
 SELinux, desktop-session, and hardware-profile failures.

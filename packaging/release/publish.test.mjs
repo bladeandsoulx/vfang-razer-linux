@@ -111,7 +111,7 @@ printf '{}\\n'
 
   const env = {
     PATH: `${bin}:/usr/bin:/bin`,
-    GITHUB_REPOSITORY: 'bladeandsoulx/fang-razer-linux',
+    GITHUB_REPOSITORY: 'bladeandsoulx/vfang-razer-linux',
     GITHUB_SHA: 'a'.repeat(40),
     GITHUB_TOKEN: 'contents-token',
     IMMUTABLE_RELEASES_TOKEN: 'administration-read-token',

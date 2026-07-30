@@ -8,7 +8,7 @@ exclude = ["app/src-tauri"]
 version = "0.9.6"
 edition = "2021"
 license = "GPL-2.0"
-repository = "https://github.com/bladeandsoulx/fang-razer-linux"
+repository = "https://github.com/bladeandsoulx/vfang-razer-linux"
 authors = ["Solomon Morse <bladeandsoulx@protonmail.com>"]
 
 [workspace.dependencies]

@@ -36,7 +36,7 @@ body:
     attributes:
       label: SELinux status and denials
       description: "Fedora: include `getenforce` and any relevant `ausearch -m AVC -ts recent` lines"
-      placeholder: "Enforcing · no Fang-related AVC denials"
+      placeholder: "Enforcing · no VFang-related AVC denials"
   - type: textarea
     id: journal
     attributes:
