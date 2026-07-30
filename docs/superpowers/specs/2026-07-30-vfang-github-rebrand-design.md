@@ -95,8 +95,9 @@ modified. The existing immutable-release policy remains enabled.
 
 1. Create an isolated rebrand branch from the current `origin/main`, keeping the
    in-progress Fedora work separate.
-2. Add focused tests for the new public brand, canonical URL, and compatibility
-   allowlist.
+2. Add a focused behavior test for the updater's canonical release URL. Audit
+   public branding and the compatibility allowlist directly rather than adding
+   source-text tests for human prose.
 3. Update maintained tracked content and run the repository's complete
    verification suite.
 4. Commit and push the reviewed changes.
