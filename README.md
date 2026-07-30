@@ -69,7 +69,7 @@ its own safe fan limits and feature list.
 
 Tested x86_64 Linux bases:
 
-- Ubuntu 22.04 and 24.04
+- Ubuntu 22.04, 24.04, and 26.04
 - Debian 12 and 13
 - Fedora 43 and 44
 

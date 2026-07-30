@@ -6,7 +6,7 @@ body:
     id: system
     attributes:
       label: System
-      placeholder: "Blade 18 2023 · Fedora 44 or Ubuntu 24.04 · GNOME Wayland · SELinux enforcing"
+      placeholder: "Blade 18 2023 · Fedora 44 or Ubuntu 26.04 · GNOME Wayland · SELinux enforcing"
     validations:
       required: true
   - type: textarea
