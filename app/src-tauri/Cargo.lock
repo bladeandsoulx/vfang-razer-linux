@@ -1100,6 +1100,7 @@ version = "0.9.7"
 dependencies = [
  "env_logger",
  "fang-protocol",
+ "gtk",
  "log",
  "serde",
  "serde_json",

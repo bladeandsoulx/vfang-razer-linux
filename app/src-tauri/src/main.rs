@@ -3,6 +3,7 @@
 mod client;
 mod display;
 mod panel;
+mod window;
 
 use client::Client;
 use fang_protocol::api::{Boost, Command, FanMode, GpuMode, KbdEffect, LogoMode, PerfMode};
@@ -308,6 +309,7 @@ fn show_main_window(app: &AppHandle) {
         let _ = w.show();
         let _ = w.unminimize();
         let _ = w.set_focus();
+        window::repair_csd_titlebar_input(&w);
     }
 }
 
@@ -415,6 +417,9 @@ fn main() {
             app.manage(Ui(Mutex::new(settings)));
             app.manage(client::spawn(handle.clone()));
             build_tray(&handle)?;
+            if let Some(window) = app.get_webview_window("main") {
+                window::repair_csd_titlebar_input(&window);
+            }
             if std::env::args().any(|a| a == "--minimized") {
                 if let Some(w) = app.get_webview_window("main") {
                     let _ = w.hide();
