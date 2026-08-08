@@ -55,3 +55,8 @@ test('lifecycle verifier covers package integrity, smoke tests, and removal', ()
   assert.match(verify, /xvfb-run/);
   assert.match(verify, /pacman -Rns --noconfirm fang fangd/);
 });
+
+test('lifecycle verifier lets the non-root builder traverse its dummy package directory', () => {
+  const verify = read('packaging/arch/verify.sh');
+  assert.match(verify, /TMP="\$\(mktemp -d\)"\nchmod 0755 "\$TMP"/);
+});

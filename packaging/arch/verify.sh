@@ -5,6 +5,7 @@ PACKAGE_DIR="${1:?usage: verify.sh PACKAGE_DIRECTORY TEST_BUILDER}"
 TEST_BUILDER="${2:?usage: verify.sh PACKAGE_DIRECTORY TEST_BUILDER}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TMP="$(mktemp -d)"
+chmod 0755 "$TMP"
 trap 'rm -rf -- "$TMP"' EXIT
 
 VERSION="$(node -p "require('$ROOT/app/package.json').version")"
