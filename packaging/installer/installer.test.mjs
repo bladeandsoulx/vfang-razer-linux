@@ -12,13 +12,39 @@ const installer = path.join(root, 'install.sh');
 const version = JSON.parse(fs.readFileSync(path.join(root, 'app/package.json'), 'utf8')).version;
 const [major, minor, patch] = version.split('.').map(Number);
 const newerVersion = `${major}.${minor}.${patch + 1}`;
+const pacmanVersion = `${version}-1`;
+const pacmanUpperBound = `${major}.${minor + 1}.0`;
+const pacmanNames = [
+  `fang-${version}-1-x86_64.pkg.tar.zst`,
+  `fangd-${version}-1-x86_64.pkg.tar.zst`
+];
 const releaseNames = [
   'install.sh',
   `Fang_${version}_amd64.deb`,
   `fangd_${version}-1_amd64.deb`,
   `fang-${version}-1.x86_64.rpm`,
-  `fangd-${version}-1.x86_64.rpm`
+  `fangd-${version}-1.x86_64.rpm`,
+  ...pacmanNames
 ];
+
+const defaultPacmanFangPkginfo = [
+  '# package fixture',
+  '',
+  'pkgname = fang',
+  `pkgver = ${pacmanVersion}`,
+  'arch = x86_64',
+  'license = GPL-3.0-or-later',
+  `depend = fangd>=${version}`,
+  `depend = fangd<${pacmanUpperBound}`
+].join('\n');
+const defaultPacmanFangdPkginfo = [
+  '# package fixture',
+  '',
+  'pkgname = fangd',
+  `pkgver = ${pacmanVersion}`,
+  'arch = x86_64',
+  'license = GPL-3.0-or-later'
+].join('\n');
 
 function executable(file, text) {
   fs.writeFileSync(file, text, { mode: 0o755 });
@@ -38,7 +64,9 @@ function makeFixture({
   noColor = true,
   groupExists = true,
   serviceBecomesActive = true,
-  systemctlEnableFailure = false
+  systemctlEnableFailure = false,
+  pacmanFailure = false,
+  vercmpOutput = ''
 }) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-installer-test-'));
   const bin = path.join(dir, 'bin');
@@ -227,7 +255,67 @@ case "\${1:-}" in
 esac
 `
   );
-  for (const command of ['apt-get', 'dnf', 'pacman', 'vercmp', 'bsdtar', 'usermod']) {
+  executable(
+    path.join(bin, 'bsdtar'),
+    `#!/usr/bin/env bash
+printf 'bsdtar %s\\n' "$*" >> "\${FANG_TEST_LOG}"
+file="\${2:-}"
+case "\${file##*/}" in
+  fangd-*) members="\${FANG_TEST_PACMAN_FANGD_MEMBERS}"; pkginfo="\${FANG_TEST_PACMAN_FANGD_PKGINFO}" ;;
+  fang-*) members="\${FANG_TEST_PACMAN_FANG_MEMBERS}"; pkginfo="\${FANG_TEST_PACMAN_FANG_PKGINFO}" ;;
+  *) exit 2 ;;
+esac
+case "\${1:-}" in
+  -tf) printf '%s\\n' "$members" ;;
+  -xOf)
+    [[ "\${3:-}" == .PKGINFO ]] || exit 2
+    printf '%s\\n' "$pkginfo"
+    ;;
+  *) exit 2 ;;
+esac
+`
+  );
+  executable(
+    path.join(bin, 'pacman'),
+    `#!/usr/bin/env bash
+case "\${1:-}" in
+  -Q)
+    [[ "\${2:-}" == -- && $# == 3 ]] || exit 2
+    package="\${@: -1}"
+    case "$package" in
+      fang) value="\${FANG_TEST_INSTALLED_FANG}" ;;
+      fangd) value="\${FANG_TEST_INSTALLED_FANGD}" ;;
+      *) exit 2 ;;
+    esac
+    [[ -n "$value" ]] || exit 1
+    printf '%s\\n' "$value"
+    ;;
+  -U)
+    printf 'pacman %s\\n' "$*" >> "\${FANG_TEST_LOG}"
+    [[ "\${FANG_TEST_PACMAN_FAILURE}" == 0 ]]
+    ;;
+  *) exit 2 ;;
+esac
+`
+  );
+  executable(
+    path.join(bin, 'vercmp'),
+    `#!/usr/bin/env bash
+if [[ -n "\${FANG_TEST_VERCMP_OUTPUT}" ]]; then
+  printf '%s\\n' "\${FANG_TEST_VERCMP_OUTPUT}"
+elif [[ "$1" == "$2" ]]; then
+  printf '0\\n'
+else
+  case "$1:$2" in
+    0.9.3-1:${pacmanVersion}) printf '%s\\n' -1 ;;
+    ${pacmanVersion}:0.9.3-1) printf '%s\\n' 1 ;;
+    ${version}-2:${pacmanVersion}) printf '%s\\n' 1 ;;
+    *) exit 2 ;;
+  esac
+fi
+`
+  );
+  for (const command of ['apt-get', 'dnf', 'usermod']) {
     executable(
       path.join(bin, command),
       `#!/usr/bin/env bash\nprintf '${command} %s\\n' "$*" >> "\${FANG_TEST_LOG}"\nexit 0\n`
@@ -248,6 +336,8 @@ esac
     FANG_TEST_GROUP_EXISTS: groupExists ? '1' : '0',
     FANG_TEST_SERVICE_BECOMES_ACTIVE: serviceBecomesActive ? '1' : '0',
     FANG_TEST_SYSTEMCTL_ENABLE_FAILURE: systemctlEnableFailure ? '1' : '0',
+    FANG_TEST_PACMAN_FAILURE: pacmanFailure ? '1' : '0',
+    FANG_TEST_VERCMP_OUTPUT: vercmpOutput,
     FANG_TEST_SERVICE_STATE: serviceState,
     FANG_TEST_HOME: path.join(dir, 'home'),
     FANG_TEST_LOG: log,
@@ -270,6 +360,10 @@ esac
     FANG_TEST_RPM_FANGD_VERSION: metadata.rpmFangdVersion ?? version,
     FANG_TEST_RPM_FANGD_RELEASE: metadata.rpmFangdRelease ?? '1',
     FANG_TEST_RPM_FANGD_ARCH: metadata.rpmFangdArch ?? 'x86_64',
+    FANG_TEST_PACMAN_FANG_MEMBERS: metadata.pacmanFangMembers ?? '.PKGINFO',
+    FANG_TEST_PACMAN_FANGD_MEMBERS: metadata.pacmanFangdMembers ?? '.PKGINFO',
+    FANG_TEST_PACMAN_FANG_PKGINFO: metadata.pacmanFangPkginfo ?? defaultPacmanFangPkginfo,
+    FANG_TEST_PACMAN_FANGD_PKGINFO: metadata.pacmanFangdPkginfo ?? defaultPacmanFangdPkginfo,
     FANG_TEST_INSTALLED_FANG: installed.fang ?? '',
     FANG_TEST_INSTALLED_FANGD: installed.fangd ?? ''
   };
@@ -581,6 +675,18 @@ test('downloads only the selected exact pinned package pair', () => {
   fixture.cleanup();
 });
 
+test('downloads and installs only the pinned Pacman pair on Arch', () => {
+  const fixture = makeFixture({ osRelease: 'ID=arch\n' });
+  const result = fixture.run();
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const commands = fixture.commands();
+  assert.match(commands, new RegExp(`/v${version}/fang-${version}-1-x86_64\\.pkg\\.tar\\.zst`));
+  assert.match(commands, new RegExp(`/v${version}/fangd-${version}-1-x86_64\\.pkg\\.tar\\.zst`));
+  assert.match(commands, /sudo pacman -U --noconfirm .*fangd-.* .*fang-.*/);
+  assert.doesNotMatch(commands, /\.deb|\.rpm|apt-get|dnf/);
+  fixture.cleanup();
+});
+
 test('rejects malformed checksum manifests before sudo', () => {
   const transformations = [
     (value) => value.split('\n').slice(1).join('\n'),
@@ -612,6 +718,10 @@ test('rejects a wrong checksum for every selected package before sudo', () => {
     [
       'ID=fedora\nVERSION_ID=44\nVERSION_CODENAME=""\nCPE_NAME="cpe:/o:fedoraproject:fedora:44"\n',
       [`fang-${version}-1.x86_64.rpm`, `fangd-${version}-1.x86_64.rpm`]
+    ],
+    [
+      'ID=arch\n',
+      pacmanNames
     ]
   ]) {
     for (const corruptAsset of names) {
@@ -671,6 +781,149 @@ test('rejects every wrong RPM metadata field before sudo', () => {
     assert.doesNotMatch(fixture.commands(), /^sudo /m);
     fixture.cleanup();
   }
+});
+
+test('rejects malformed Pacman archive members and PKGINFO fields before sudo', () => {
+  const fangWithout = (line) => defaultPacmanFangPkginfo
+    .split('\n')
+    .filter((candidate) => !candidate.startsWith(`${line} = `))
+    .join('\n');
+  const cases = [
+    ['desktop missing .PKGINFO', { pacmanFangMembers: 'usr/' }],
+    ['desktop duplicate .PKGINFO', { pacmanFangMembers: '.PKGINFO\n.PKGINFO' }],
+    ['daemon missing .PKGINFO', { pacmanFangdMembers: 'usr/' }],
+    ['daemon duplicate .PKGINFO', { pacmanFangdMembers: '.PKGINFO\n.PKGINFO' }],
+    ['malformed assignment', { pacmanFangPkginfo: defaultPacmanFangPkginfo.replace('pkgname = fang', 'pkgname=fang') }],
+    ['control character', { pacmanFangPkginfo: defaultPacmanFangPkginfo.replace('GPL-3.0-or-later', 'GPL\t3.0') }],
+    ['wrong desktop pkgname', { pacmanFangPkginfo: defaultPacmanFangPkginfo.replace('pkgname = fang', 'pkgname = other') }],
+    ['wrong desktop pkgver', { pacmanFangPkginfo: defaultPacmanFangPkginfo.replace(`pkgver = ${pacmanVersion}`, 'pkgver = 0.9.3-1') }],
+    ['wrong desktop arch', { pacmanFangPkginfo: defaultPacmanFangPkginfo.replace('arch = x86_64', 'arch = aarch64') }],
+    ['wrong daemon pkgname', { pacmanFangdPkginfo: defaultPacmanFangdPkginfo.replace('pkgname = fangd', 'pkgname = otherd') }],
+    ['wrong daemon pkgver', { pacmanFangdPkginfo: defaultPacmanFangdPkginfo.replace(`pkgver = ${pacmanVersion}`, 'pkgver = 0.9.3-1') }],
+    ['wrong daemon arch', { pacmanFangdPkginfo: defaultPacmanFangdPkginfo.replace('arch = x86_64', 'arch = aarch64') }],
+    ['missing pkgname', { pacmanFangPkginfo: fangWithout('pkgname') }],
+    ['missing pkgver', { pacmanFangPkginfo: fangWithout('pkgver') }],
+    ['missing arch', { pacmanFangPkginfo: fangWithout('arch') }],
+    ['duplicate pkgname', { pacmanFangPkginfo: `${defaultPacmanFangPkginfo}\npkgname = fang` }],
+    ['duplicate pkgver', { pacmanFangPkginfo: `${defaultPacmanFangPkginfo}\npkgver = ${pacmanVersion}` }],
+    ['duplicate arch', { pacmanFangdPkginfo: `${defaultPacmanFangdPkginfo}\narch = x86_64` }]
+  ];
+
+  for (const [label, metadata] of cases) {
+    const fixture = makeFixture({ osRelease: 'ID=arch\n', metadata });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0, label);
+    assert.match(result.stderr, /metadata|PKGINFO/i, label);
+    assert.doesNotMatch(fixture.commands(), /^sudo /m, label);
+    fixture.cleanup();
+  }
+});
+
+test('requires exact desktop fangd bounds and no daemon fangd dependency before sudo', () => {
+  const withoutLower = defaultPacmanFangPkginfo.replace(`depend = fangd>=${version}\n`, '');
+  const cases = [
+    ['missing bound', { pacmanFangPkginfo: withoutLower }],
+    ['widened bound', { pacmanFangPkginfo: defaultPacmanFangPkginfo.replace(`fangd<${pacmanUpperBound}`, 'fangd<1.0.0') }],
+    ['duplicated bound', { pacmanFangPkginfo: `${defaultPacmanFangPkginfo}\ndepend = fangd>=${version}` }],
+    ['contradictory bound', { pacmanFangPkginfo: `${defaultPacmanFangPkginfo}\ndepend = fangd=${pacmanVersion}` }],
+    ['daemon dependency', { pacmanFangdPkginfo: `${defaultPacmanFangdPkginfo}\ndepend = fangd>=${version}` }]
+  ];
+
+  for (const [label, metadata] of cases) {
+    const fixture = makeFixture({ osRelease: 'ID=arch\n', metadata });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0, label);
+    assert.match(result.stderr, /metadata|depend/i, label);
+    assert.doesNotMatch(fixture.commands(), /^sudo /m, label);
+    fixture.cleanup();
+  }
+});
+
+test('verifies Pacman checksums before inspecting PKGINFO', () => {
+  const fixture = makeFixture({
+    osRelease: 'ID=arch\n',
+    corruptAsset: pacmanNames[0],
+    metadata: { pacmanFangPkginfo: 'pkgname=malformed' }
+  });
+  const result = fixture.run();
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr + result.stdout, /checksum/i);
+  assert.doesNotMatch(fixture.commands(), /^bsdtar /m);
+  assert.doesNotMatch(fixture.commands(), /^sudo /m);
+  fixture.cleanup();
+});
+
+test('Pacman installed-version policy repairs pairs and refuses either downgrade before sudo', () => {
+  const transactionCases = [
+    ['absent pair', { fang: '', fangd: '' }],
+    ['missing daemon', { fang: `fang ${pacmanVersion}`, fangd: '' }],
+    ['missing desktop', { fang: '', fangd: `fangd ${pacmanVersion}` }],
+    ['older pair', { fang: 'fang 0.9.3-1', fangd: 'fangd 0.9.3-1' }]
+  ];
+  for (const [label, installed] of transactionCases) {
+    const fixture = makeFixture({ osRelease: 'ID=arch\n', installed });
+    const result = fixture.run();
+    assert.equal(result.status, 0, `${label}: ${result.stdout}${result.stderr}`);
+    assert.match(
+      fixture.commands(),
+      new RegExp(`^sudo pacman -U --noconfirm .*${path.sep}fangd-${version}-1-x86_64\\.pkg\\.tar\\.zst .*${path.sep}fang-${version}-1-x86_64\\.pkg\\.tar\\.zst$`, 'm'),
+      label
+    );
+    fixture.cleanup();
+  }
+
+  const equal = makeFixture({
+    osRelease: 'ID=arch\n',
+    installed: { fang: `fang ${pacmanVersion}`, fangd: `fangd ${pacmanVersion}` }
+  });
+  const equalResult = equal.run();
+  assert.equal(equalResult.status, 0, equalResult.stdout + equalResult.stderr);
+  assert.doesNotMatch(equal.commands(), /^sudo pacman /m);
+  equal.cleanup();
+
+  for (const [label, installed] of [
+    ['newer desktop', { fang: `fang ${version}-2`, fangd: '' }],
+    ['newer daemon', { fang: '', fangd: `fangd ${version}-2` }]
+  ]) {
+    const fixture = makeFixture({ osRelease: 'ID=arch\n', installed });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0, label);
+    assert.match(result.stderr, /refusing downgrade/i, label);
+    assert.doesNotMatch(fixture.commands(), /^sudo /m, label);
+    fixture.cleanup();
+  }
+});
+
+test('rejects malformed Pacman installed records and vercmp output before sudo', () => {
+  const cases = [
+    ['missing version', { installed: { fang: 'fang', fangd: '' } }],
+    ['wrong name', { installed: { fang: 'other 0.9.3-1', fangd: '' } }],
+    ['extra field', { installed: { fang: 'fang 0.9.3-1 extra', fangd: '' } }],
+    ['multiple records', { installed: { fang: 'fang 0.9.3-1\nfang 0.9.3-1', fangd: '' } }],
+    ['wrong daemon name', { installed: { fang: '', fangd: 'otherd 0.9.3-1' } }],
+    ['nonnumeric vercmp', { installed: { fang: 'fang 0.9.3-1', fangd: '' }, vercmpOutput: 'newer' }]
+  ];
+
+  for (const [label, options] of cases) {
+    const fixture = makeFixture({ osRelease: 'ID=arch\n', ...options });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0, label);
+    assert.match(result.stderr, /Pacman|vercmp/i, label);
+    assert.doesNotMatch(fixture.commands(), /^sudo /m, label);
+    fixture.cleanup();
+  }
+});
+
+test('Pacman transaction failure gives update guidance and aborts reconciliation', () => {
+  const fixture = makeFixture({ osRelease: 'ID=arch\n', pacmanFailure: true });
+  const result = fixture.run();
+  assert.notEqual(result.status, 0);
+  const commands = fixture.commands();
+  assert.match(commands, /^sudo pacman -U --noconfirm /m);
+  assert.doesNotMatch(commands, /--nodeps|^pacman -Syu|^sudo pacman -Syu/m);
+  assert.doesNotMatch(commands, /systemctl|usermod/);
+  assert.match(result.stderr, /sudo pacman -Syu/);
+  fixture.cleanup();
 });
 
 test('DEB installed-version policy rejects downgrades and keeps one pair transaction', () => {
@@ -917,8 +1170,16 @@ test('all verification calls precede the first sudo call in the installer source
   const main = source.slice(source.indexOf('main() {'));
   const mutation = main.indexOf('mutate_system');
   assert.ok(mutation >= 0);
-  for (const call of ['verify_checksums', 'verify_deb_metadata', 'verify_rpm_metadata', 'classify_installed_packages']) {
-    assert.ok(main.indexOf(call) < mutation, `${call} must precede mutate_system`);
+  for (const call of [
+    'verify_checksums',
+    'verify_deb_metadata',
+    'verify_rpm_metadata',
+    'verify_pacman_metadata',
+    'classify_installed_packages'
+  ]) {
+    const position = main.indexOf(call);
+    assert.ok(position >= 0, `${call} must be called from main`);
+    assert.ok(position < mutation, `${call} must precede mutate_system`);
   }
 });
 

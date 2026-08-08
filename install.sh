@@ -362,6 +362,8 @@ parse_manifest() {
     "$DEB_FANGD"
     "$RPM_FANG"
     "$RPM_FANGD"
+    "$PACMAN_FANG"
+    "$PACMAN_FANGD"
   )
   declare -A digests=()
 
@@ -376,14 +378,14 @@ parse_manifest() {
     [[ -z ${digests[$name]+present} ]] ||
       fatal "Duplicate checksum manifest entry: $name"
     case $name in
-      install.sh|"$DEB_FANG"|"$DEB_FANGD"|"$RPM_FANG"|"$RPM_FANGD") ;;
+      install.sh|"$DEB_FANG"|"$DEB_FANGD"|"$RPM_FANG"|"$RPM_FANGD"|"$PACMAN_FANG"|"$PACMAN_FANGD") ;;
       *) fatal "Unexpected checksum manifest entry: $name" ;;
     esac
     digests[$name]=$digest
   done < "$manifest"
 
-  [[ $line_count == 5 ]] ||
-    fatal 'The checksum manifest must contain exactly five canonical entries.'
+  [[ $line_count == 7 ]] ||
+    fatal 'The checksum manifest must contain exactly seven canonical entries.'
   for expected in "${expected_names[@]}"; do
     [[ -n ${digests[$expected]+present} ]] ||
       fatal "Missing checksum manifest entry: $expected"
@@ -456,6 +458,92 @@ verify_rpm_file() {
 verify_rpm_metadata() {
   verify_rpm_file "$WORK_DIR/$RPM_FANG" fang
   verify_rpm_file "$WORK_DIR/$RPM_FANGD" fangd
+}
+
+verify_pacman_file() {
+  local file=$1
+  local expected_name=$2
+  local require_bounds=$3
+  local output
+  local member
+  local pkginfo_count=0
+  local line
+  local key
+  local value
+  local pkgname=
+  local pkgver=
+  local arch=
+  local lower_count=0
+  local upper_count=0
+  local fangd_depend_count=0
+  local version_major=${VERSION%%.*}
+  local version_remainder=${VERSION#*.}
+  local version_minor
+  local upper_bound
+  local members=()
+  declare -A seen=()
+
+  version_minor=${version_remainder%%.*}
+  upper_bound="fangd<${version_major}.$((10#$version_minor + 1)).0"
+
+  output=$(bsdtar -tf "$file") ||
+    fatal "Could not list Pacman package metadata in ${file##*/}."
+  mapfile -t members <<< "$output"
+  for member in "${members[@]}"; do
+    [[ $member == .PKGINFO ]] && ((pkginfo_count += 1))
+  done
+  [[ $pkginfo_count == 1 ]] ||
+    fatal "Invalid Pacman package metadata in ${file##*/}: expected exactly one .PKGINFO member."
+
+  output=$(bsdtar -xOf "$file" .PKGINFO) ||
+    fatal "Could not extract Pacman package metadata from ${file##*/}."
+  while IFS= read -r line || [[ -n $line ]]; do
+    [[ -z $line || $line == \#* ]] && continue
+    if [[ $line =~ ^([a-z][a-z0-9_]*)\ =\ ([[:print:]]*)$ ]]; then
+      key=${BASH_REMATCH[1]}
+      value=${BASH_REMATCH[2]}
+    else
+      fatal "Malformed Pacman package metadata in ${file##*/}."
+    fi
+    case $key in
+      pkgname|pkgver|arch)
+        [[ -z ${seen[$key]+present} ]] ||
+          fatal "Duplicate Pacman package metadata field $key in ${file##*/}."
+        seen[$key]=1
+        case $key in
+          pkgname) pkgname=$value ;;
+          pkgver) pkgver=$value ;;
+          arch) arch=$value ;;
+        esac
+        ;;
+      depend)
+        if [[ $value == fangd* ]]; then
+          ((fangd_depend_count += 1))
+          [[ $value == "fangd>=${VERSION}" ]] && ((lower_count += 1))
+          [[ $value == "$upper_bound" ]] && ((upper_count += 1))
+        fi
+        ;;
+    esac
+  done <<< "$output"
+
+  [[ $pkgname == "$expected_name" ]] ||
+    fatal "Invalid Pacman package metadata in ${file##*/}: pkgname is '$pkgname'."
+  [[ $pkgver == "${VERSION}-1" ]] ||
+    fatal "Invalid Pacman package metadata in ${file##*/}: pkgver is '$pkgver'."
+  [[ $arch == x86_64 ]] ||
+    fatal "Invalid Pacman package metadata in ${file##*/}: arch is '$arch'."
+  if [[ $require_bounds == 1 ]]; then
+    [[ $fangd_depend_count == 2 && $lower_count == 1 && $upper_count == 1 ]] ||
+      fatal "Invalid Pacman fangd dependency bounds in ${file##*/}."
+  else
+    [[ $fangd_depend_count == 0 ]] ||
+      fatal "Invalid Pacman fangd dependency in ${file##*/}."
+  fi
+}
+
+verify_pacman_metadata() {
+  verify_pacman_file "$WORK_DIR/$PACMAN_FANG" fang 1
+  verify_pacman_file "$WORK_DIR/$PACMAN_FANGD" fangd 0
 }
 
 deb_state() {
@@ -545,6 +633,32 @@ rpm_state() {
   printf -v "$version_destination" '%s' "$installed_evr"
 }
 
+pacman_state() {
+  local package=$1 selected=$2 state_destination=$3 version_destination=$4
+  local output name installed_version comparison state
+  local records=()
+  if ! output=$(pacman -Q -- "$package" 2>/dev/null); then
+    printf -v "$state_destination" '%s' absent
+    printf -v "$version_destination" '%s' '<absent>'
+    return
+  fi
+  mapfile -t records <<< "$output"
+  [[ ${#records[@]} == 1 ]] || fatal "Installed Pacman state is ambiguous for $package: ${#records[@]} records."
+  read -r name installed_version extra <<< "${records[0]}"
+  [[ $name == "$package" && -n $installed_version && -z ${extra:-} ]] ||
+    fatal "Installed Pacman record is invalid for $package."
+  comparison=$(vercmp "$installed_version" "$selected") ||
+    fatal "Could not compare installed Pacman version for $package."
+  [[ $comparison =~ ^-?[0-9]+$ ]] ||
+    fatal "Pacman vercmp returned an invalid comparison for $package."
+  if ((comparison == 0)); then state=equal
+  elif ((comparison < 0)); then state=older
+  else state=newer
+  fi
+  printf -v "$state_destination" '%s' "$state"
+  printf -v "$version_destination" '%s' "$installed_version"
+}
+
 decide_transaction() {
   if [[ $FANG_STATE == newer ]]; then
     fatal "Refusing downgrade: fang $FANG_INSTALLED is newer than selected $FANG_SELECTED_VERSION."
@@ -560,17 +674,26 @@ decide_transaction() {
 }
 
 classify_installed_packages() {
-  if [[ $PACKAGE_FAMILY == deb ]]; then
-    FANG_SELECTED_VERSION=$DEB_FANG_VERSION
-    FANGD_SELECTED_VERSION=$DEB_FANGD_VERSION
-    deb_state fang "$FANG_SELECTED_VERSION" FANG_STATE FANG_INSTALLED
-    deb_state fangd "$FANGD_SELECTED_VERSION" FANGD_STATE FANGD_INSTALLED
-  else
-    FANG_SELECTED_VERSION="0:${VERSION}-1"
-    FANGD_SELECTED_VERSION="0:${VERSION}-1"
-    rpm_state fang "$FANG_SELECTED_VERSION" FANG_STATE FANG_INSTALLED
-    rpm_state fangd "$FANGD_SELECTED_VERSION" FANGD_STATE FANGD_INSTALLED
-  fi
+  case $PACKAGE_FAMILY in
+    deb)
+      FANG_SELECTED_VERSION=$DEB_FANG_VERSION
+      FANGD_SELECTED_VERSION=$DEB_FANGD_VERSION
+      deb_state fang "$FANG_SELECTED_VERSION" FANG_STATE FANG_INSTALLED
+      deb_state fangd "$FANGD_SELECTED_VERSION" FANGD_STATE FANGD_INSTALLED
+      ;;
+    rpm)
+      FANG_SELECTED_VERSION="0:${VERSION}-1"
+      FANGD_SELECTED_VERSION="0:${VERSION}-1"
+      rpm_state fang "$FANG_SELECTED_VERSION" FANG_STATE FANG_INSTALLED
+      rpm_state fangd "$FANGD_SELECTED_VERSION" FANGD_STATE FANGD_INSTALLED
+      ;;
+    pacman)
+      FANG_SELECTED_VERSION=$PACMAN_FANG_VERSION
+      FANGD_SELECTED_VERSION=$PACMAN_FANGD_VERSION
+      pacman_state fang "$FANG_SELECTED_VERSION" FANG_STATE FANG_INSTALLED
+      pacman_state fangd "$FANGD_SELECTED_VERSION" FANGD_STATE FANGD_INSTALLED
+      ;;
+  esac
   decide_transaction
 }
 
@@ -578,11 +701,20 @@ install_selected_packages() {
   if [[ $PACKAGE_TRANSACTION != 1 ]]; then
     return 0
   fi
-  if [[ $PACKAGE_FAMILY == deb ]]; then
-    sudo apt-get install -y "$WORK_DIR/$DEB_FANGD" "$WORK_DIR/$DEB_FANG"
-  else
-    sudo dnf install -y "$WORK_DIR/$RPM_FANGD" "$WORK_DIR/$RPM_FANG"
-  fi
+  case $PACKAGE_FAMILY in
+    deb)
+      sudo apt-get install -y "$WORK_DIR/$DEB_FANGD" "$WORK_DIR/$DEB_FANG"
+      ;;
+    rpm)
+      sudo dnf install -y "$WORK_DIR/$RPM_FANGD" "$WORK_DIR/$RPM_FANG"
+      ;;
+    pacman)
+      if ! sudo pacman -U --noconfirm \
+        "$WORK_DIR/$PACMAN_FANGD" "$WORK_DIR/$PACMAN_FANG"; then
+        fatal 'Pacman could not install VFang. Fully update with: sudo pacman -Syu, then rerun this installer.'
+      fi
+      ;;
+  esac
 }
 
 service_diagnostics() {
@@ -651,6 +783,10 @@ readonly DEB_FANG_VERSION="$VERSION"
 readonly DEB_FANGD_VERSION="${VERSION}-1"
 readonly RPM_FANG="fang-${VERSION}-1.x86_64.rpm"
 readonly RPM_FANGD="fangd-${VERSION}-1.x86_64.rpm"
+readonly PACMAN_FANG="fang-${VERSION}-1-x86_64.pkg.tar.zst"
+readonly PACMAN_FANGD="fangd-${VERSION}-1-x86_64.pkg.tar.zst"
+readonly PACMAN_FANG_VERSION="${VERSION}-1"
+readonly PACMAN_FANGD_VERSION="${VERSION}-1"
 
   configure_output
   print_banner
@@ -677,13 +813,11 @@ readonly RPM_FANGD="fangd-${VERSION}-1.x86_64.rpm"
   WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/fang-installer.XXXXXX")
   trap cleanup EXIT
   trap on_signal HUP INT TERM
-  if [[ $PACKAGE_FAMILY == deb ]]; then
-    SELECTED_FANG=$DEB_FANG
-    SELECTED_FANGD=$DEB_FANGD
-  else
-    SELECTED_FANG=$RPM_FANG
-    SELECTED_FANGD=$RPM_FANGD
-  fi
+  case $PACKAGE_FAMILY in
+    deb) SELECTED_FANG=$DEB_FANG; SELECTED_FANGD=$DEB_FANGD ;;
+    rpm) SELECTED_FANG=$RPM_FANG; SELECTED_FANGD=$RPM_FANGD ;;
+    pacman) SELECTED_FANG=$PACMAN_FANG; SELECTED_FANGD=$PACMAN_FANGD ;;
+  esac
 
   step "Downloading VFang $VERSION packages..."
   download_file "$RELEASE_BASE/SHA256SUMS" "$WORK_DIR/SHA256SUMS"
@@ -692,11 +826,11 @@ readonly RPM_FANGD="fangd-${VERSION}-1.x86_64.rpm"
   complete "Downloaded VFang $VERSION package pair"
 
   verify_checksums
-  if [[ $PACKAGE_FAMILY == deb ]]; then
-    verify_deb_metadata
-  else
-    verify_rpm_metadata
-  fi
+  case $PACKAGE_FAMILY in
+    deb) verify_deb_metadata ;;
+    rpm) verify_rpm_metadata ;;
+    pacman) verify_pacman_metadata ;;
+  esac
   classify_installed_packages
   complete 'Checksums and package metadata verified'
   mutate_system
