@@ -4,6 +4,22 @@ All notable changes to VFang are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.9.9] — 2026-08-08 — Arch-family packages
+
+### Added
+
+- First-party x86_64 Pacman packages for VFang and its daemon, installed through
+  the same checksum- and metadata-verified one-command flow as DEB and RPM.
+- Direct clean-container package coverage for Arch Linux and CachyOS, with
+  compatible-family installation for distributions reporting `ID_LIKE=arch`.
+
+### Changed
+
+- Immutable releases now contain eight exact assets: the installer, checksum
+  manifest, two DEBs, two RPMs, and two Pacman packages.
+- Arch-family builds use baseline x86_64 so all supported Razer Blade CPU
+  generations remain eligible.
+
 ## [0.9.8] — 2026-07-30 — Wayland window controls
 
 ### Fixed

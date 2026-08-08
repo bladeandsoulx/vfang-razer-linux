@@ -79,6 +79,44 @@ function replaceRpmMacro(text, name, value) {
   );
 }
 
+function pkgbuildField(text, name) {
+  const escaped = name.replace(/[.*+?^{}$()|[\]\\]/g, '\\$&');
+  const candidates = [
+    ...text.matchAll(new RegExp('^[^\\S\\r\\n]*' + escaped + '[^\\S\\r\\n]*=', 'gm'))
+  ];
+  const exact = [
+    ...text.matchAll(new RegExp('^' + escaped + '=(\\S+)[^\\S\\r\\n]*$', 'gm'))
+  ];
+  if (candidates.length !== 1 || exact.length !== 1) {
+    throw new Error('could not read exactly one Pacman ' + name);
+  }
+  return exact[0][1];
+}
+
+function replacePkgbuildField(text, name, value) {
+  const escaped = name.replace(/[.*+?^{}$()|[\]\\]/g, '\\$&');
+  pkgbuildField(text, name);
+  return replaceRequired(
+    'Pacman ' + name,
+    text,
+    new RegExp('^(' + escaped + '=)\\S+([^\\S\\r\\n]*)$', 'm'),
+    '$1' + value + '$2'
+  );
+}
+
+function pkgbuildDesktopDependencies(text) {
+  const desktopPackage = capture(
+    'Pacman desktop package',
+    text,
+    /^package_fang\(\)[^\S\r\n]*\{([\s\S]*?)^\}/m
+  );
+  return capture(
+    'Pacman desktop dependencies',
+    desktopPackage,
+    /^[^\S\r\n]*depends=\(\n([\s\S]*?)^[^\S\r\n]*\)/m
+  ).replace(/^[^\S\r\n]*#.*(?:\n|$)/gm, '');
+}
+
 function currentVersions() {
   const rootCargo = read('Cargo.toml');
   const rootLock = read('Cargo.lock');
@@ -92,6 +130,7 @@ function currentVersions() {
   const banner = read('packaging/installer/banner.txt');
   const fangRpm = read('packaging/rpm/fang.spec');
   const fangdRpm = read('packaging/rpm/fangd.spec');
+  const pkgbuild = read('packaging/arch/PKGBUILD');
   return [
     ['workspace Cargo.toml', capture('workspace version', rootCargo, /\[workspace\.package\][\s\S]*?\nversion = "([^"]+)"/)],
     ['fang-protocol Cargo.lock', cargoPackageVersion(rootLock, 'fang-protocol')],
@@ -105,6 +144,7 @@ function currentVersions() {
     ['tauri.conf.json', tauri.version],
     ['fang RPM spec', rpmField(fangRpm, 'Version')],
     ['fangd RPM spec', rpmField(fangdRpm, 'Version')],
+    ['fang Pacman PKGBUILD', pkgbuildField(pkgbuild, 'pkgver')],
     ['release installer', capture('release installer version', installer, /^readonly VERSION='([^']+)'$/m)],
     [
       'installer banner',
@@ -134,6 +174,8 @@ function check() {
   const [major, minor] = expected.split('.').map(Number);
   const upper = major + '.' + (minor + 1) + '.0';
   const fangRpm = read('packaging/rpm/fang.spec');
+  const pkgbuild = read('packaging/arch/PKGBUILD');
+  const pacmanDepends = pkgbuildDesktopDependencies(pkgbuild);
   const installer = read('install.sh');
   if (
     capture('release installer tag', installer, /^readonly RELEASE_TAG='([^']+)'$/m) !==
@@ -147,6 +189,14 @@ function check() {
     rpmMacro(fangRpm, 'fangd_upper') !== upper
   ) {
     throw new Error('VFang RPM must depend on the matching fangd release line');
+  }
+  if (
+    pkgbuildField(pkgbuild, 'pkgrel') !== '1' ||
+    pkgbuildField(pkgbuild, '_fangd_upper') !== upper ||
+    !/(?:^|[^\S\r\n])"fangd>=\$\{pkgver\}"(?=[\s]|$)/m.test(pacmanDepends) ||
+    !/(?:^|[^\S\r\n])"fangd<\$\{_fangd_upper\}"(?=[\s]|$)/m.test(pacmanDepends)
+  ) {
+    throw new Error('VFang Pacman package must depend on the matching fangd release line');
   }
   if (
     !depends.includes('fangd (>= ' + expected + ')') ||
@@ -213,6 +263,12 @@ function setVersion(version) {
     }
     write(name, text);
   }
+
+  text = read('packaging/arch/PKGBUILD');
+  text = replacePkgbuildField(text, 'pkgver', version);
+  text = replacePkgbuildField(text, 'pkgrel', '1');
+  text = replacePkgbuildField(text, '_fangd_upper', major + '.' + (minor + 1) + '.0');
+  write('packaging/arch/PKGBUILD', text);
 
   text = read('install.sh');
   text = replaceRequired(

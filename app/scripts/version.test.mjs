@@ -18,6 +18,7 @@ const files = [
   'app/src-tauri/Cargo.toml',
   'app/src-tauri/Cargo.lock',
   'app/src-tauri/tauri.conf.json',
+  'packaging/arch/PKGBUILD',
   'packaging/installer/banner.txt',
   'packaging/rpm/fang.spec',
   'packaging/rpm/fangd.spec'
@@ -62,6 +63,77 @@ test('check rejects an incorrect RPM upper bound', () => {
   const result = run(dir, 'check');
   assert.notEqual(result.status, 0, result.stdout + result.stderr);
   assert.match(result.stderr, /RPM.*release line|fangd_upper/i);
+  fs.rmSync(dir, { recursive: true });
+});
+
+test('check rejects a stale Pacman package version or release', () => {
+  const dir = fixture();
+  const pkgbuild = path.join(dir, 'packaging/arch/PKGBUILD');
+  fs.writeFileSync(pkgbuild, fs.readFileSync(pkgbuild, 'utf8').replace(/^pkgrel=1$/m, 'pkgrel=2'));
+  const result = run(dir, 'check');
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stderr, /Pacman|pkgrel|synchronized/i);
+  fs.rmSync(dir, { recursive: true });
+});
+
+test('check requires Pacman daemon bounds in the desktop package dependencies', () => {
+  const dir = fixture();
+  const pkgbuild = path.join(dir, 'packaging/arch/PKGBUILD');
+  const malformed = mutateFixture(
+    fs.readFileSync(pkgbuild, 'utf8'),
+    /    "fangd>=\$\{pkgver\}" "fangd<\$\{_fangd_upper\}"/,
+    '    # "fangd>=${pkgver}" "fangd<${_fangd_upper}"\n    fangd'
+  );
+  fs.writeFileSync(pkgbuild, malformed);
+  const result = run(dir, 'check');
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stderr, /Pacman.*release line/i);
+  fs.rmSync(dir, { recursive: true });
+});
+
+test('check rejects malformed multiline Pacman fields', () => {
+  for (const name of ['pkgver', 'pkgrel', '_fangd_upper']) {
+    const dir = fixture();
+    const pkgbuild = path.join(dir, 'packaging/arch/PKGBUILD');
+    const malformed = mutateFixture(
+      fs.readFileSync(pkgbuild, 'utf8'),
+      new RegExp(`^(${name.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')})=(\\S+)[^\\S\\r\\n]*$`, 'm'),
+      '$1=\n$2'
+    );
+    fs.writeFileSync(pkgbuild, malformed);
+    const result = run(dir, 'check');
+    assert.notEqual(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stderr, new RegExp(`could not read exactly one Pacman ${name}`));
+    fs.rmSync(dir, { recursive: true });
+  }
+});
+
+test('set rejects malformed multiline Pacman fields', () => {
+  for (const name of ['pkgver', 'pkgrel', '_fangd_upper']) {
+    const dir = fixture();
+    const pkgbuild = path.join(dir, 'packaging/arch/PKGBUILD');
+    const malformed = mutateFixture(
+      fs.readFileSync(pkgbuild, 'utf8'),
+      new RegExp(`^(${name.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')})=(\\S+)[^\\S\\r\\n]*$`, 'm'),
+      '$1=\n$2'
+    );
+    fs.writeFileSync(pkgbuild, malformed);
+    const result = run(dir, 'set', '0.10.0');
+    assert.notEqual(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stderr, new RegExp(`could not read exactly one Pacman ${name}`));
+    assert.equal(fs.readFileSync(pkgbuild, 'utf8'), malformed);
+    fs.rmSync(dir, { recursive: true });
+  }
+});
+
+test('set updates Pacman pkgver and next-minor daemon bound', () => {
+  const dir = fixture();
+  const result = run(dir, 'set', '0.10.0');
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const pkgbuild = fs.readFileSync(path.join(dir, 'packaging/arch/PKGBUILD'), 'utf8');
+  assert.match(pkgbuild, /^pkgver=0\.10\.0$/m);
+  assert.match(pkgbuild, /^pkgrel=1$/m);
+  assert.match(pkgbuild, /^_fangd_upper=0\.11\.0$/m);
   fs.rmSync(dir, { recursive: true });
 });
 

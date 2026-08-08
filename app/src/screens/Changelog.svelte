@@ -2,6 +2,25 @@
   // Mirrors CHANGELOG.md, condensed for the panel. Newest first.
   const RELEASES = [
     {
+      version: '0.9.9',
+      date: '2026-08-08',
+      title: 'Arch-family packages',
+      groups: [
+        {
+          kind: 'Added',
+          items: [
+            'First-party Pacman packages for x86_64 now support Arch Linux and CachyOS through the checksum- and metadata-verified one-command installer, including compatible distributions reporting ID_LIKE=arch.'
+          ]
+        },
+        {
+          kind: 'Changed',
+          items: [
+            'Immutable releases now contain eight exact assets: the installer, checksum manifest, two DEBs, two RPMs, and two Pacman packages. Arch-family builds use baseline x86_64 so every supported Razer Blade CPU generation remains eligible.'
+          ]
+        }
+      ]
+    },
+    {
       version: '0.9.8',
       date: '2026-07-30',
       title: 'Wayland window controls',
