@@ -106,6 +106,60 @@ test('check rejects Pacman daemon bounds hidden by an inline comment', () => {
   fs.rmSync(dir, { recursive: true });
 });
 
+test('check preserves Pacman daemon bounds after an unquoted hash within a dependency word', () => {
+  const dir = fixture();
+  const pkgbuild = path.join(dir, 'packaging/arch/PKGBUILD');
+  const dependencyLine = '    glibc# "fangd>=${pkgver}" "fangd<${_fangd_upper}"';
+  fs.writeFileSync(
+    pkgbuild,
+    mutateFixture(
+      fs.readFileSync(pkgbuild, 'utf8'),
+      /    "fangd>=\$\{pkgver\}" "fangd<\$\{_fangd_upper\}"/,
+      dependencyLine
+    )
+  );
+  const result = run(dir, 'check');
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /VFang version sync OK: 0\.9\.9/);
+  fs.rmSync(dir, { recursive: true });
+});
+
+test('check preserves Pacman daemon bounds after a quoted hash', () => {
+  const dir = fixture();
+  const pkgbuild = path.join(dir, 'packaging/arch/PKGBUILD');
+  const dependencyLine = '    "#" "fangd>=${pkgver}" "fangd<${_fangd_upper}"';
+  fs.writeFileSync(
+    pkgbuild,
+    mutateFixture(
+      fs.readFileSync(pkgbuild, 'utf8'),
+      /    "fangd>=\$\{pkgver\}" "fangd<\$\{_fangd_upper\}"/,
+      dependencyLine
+    )
+  );
+  const result = run(dir, 'check');
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /VFang version sync OK: 0\.9\.9/);
+  fs.rmSync(dir, { recursive: true });
+});
+
+test('check preserves Pacman daemon bounds after an escaped hash', () => {
+  const dir = fixture();
+  const pkgbuild = path.join(dir, 'packaging/arch/PKGBUILD');
+  const dependencyLine = '    glibc\\# "fangd>=${pkgver}" "fangd<${_fangd_upper}"';
+  fs.writeFileSync(
+    pkgbuild,
+    mutateFixture(
+      fs.readFileSync(pkgbuild, 'utf8'),
+      /    "fangd>=\$\{pkgver\}" "fangd<\$\{_fangd_upper\}"/,
+      dependencyLine
+    )
+  );
+  const result = run(dir, 'check');
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /VFang version sync OK: 0\.9\.9/);
+  fs.rmSync(dir, { recursive: true });
+});
+
 test('check rejects malformed multiline Pacman fields', () => {
   for (const name of ['pkgver', 'pkgrel', '_fangd_upper']) {
     const dir = fixture();

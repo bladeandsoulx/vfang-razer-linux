@@ -109,35 +109,49 @@ function stripPkgbuildComments(text) {
   let quote = '';
   let escaped = false;
   let comment = false;
+  let atWordStart = true;
   for (const character of text) {
     if (comment) {
       if (character === '\n') {
         comment = false;
+        atWordStart = true;
         result += character;
       }
       continue;
     }
     if (escaped) {
       escaped = false;
+      atWordStart = false;
       result += character;
       continue;
     }
     if (character === '\\' && quote !== "'") {
       escaped = true;
+      atWordStart = false;
       result += character;
       continue;
     }
     if (quote) {
       if (character === quote) quote = '';
+      atWordStart = false;
       result += character;
       continue;
     }
     if (character === '"' || character === "'") {
       quote = character;
+      atWordStart = false;
       result += character;
     } else if (character === '#') {
+      if (!atWordStart) {
+        result += character;
+        continue;
+      }
       comment = true;
+    } else if (/\s/.test(character)) {
+      atWordStart = true;
+      result += character;
     } else {
+      atWordStart = ';|&()<>'.includes(character);
       result += character;
     }
   }
