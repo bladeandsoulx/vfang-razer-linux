@@ -110,7 +110,8 @@ function stripPkgbuildComments(text) {
   let escaped = false;
   let comment = false;
   let atWordStart = true;
-  for (const character of text) {
+  for (let index = 0; index < text.length; index++) {
+    const character = text[index];
     if (comment) {
       if (character === '\n') {
         comment = false;
@@ -126,6 +127,10 @@ function stripPkgbuildComments(text) {
       continue;
     }
     if (character === '\\' && quote !== "'") {
+      if (!quote && text[index + 1] === '\n') {
+        index++;
+        continue;
+      }
       escaped = true;
       atWordStart = false;
       result += character;

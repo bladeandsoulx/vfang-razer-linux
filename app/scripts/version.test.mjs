@@ -106,6 +106,48 @@ test('check rejects Pacman daemon bounds hidden by an inline comment', () => {
   fs.rmSync(dir, { recursive: true });
 });
 
+test('check rejects Pacman daemon bounds hidden after a whitespace line continuation', () => {
+  const dir = fixture();
+  const pkgbuild = path.join(dir, 'packaging/arch/PKGBUILD');
+  const dependencyLine = [
+    '    glibc \\',
+    '# "fangd>=${pkgver}" "fangd<${_fangd_upper}"'
+  ].join('\n');
+  fs.writeFileSync(
+    pkgbuild,
+    mutateFixture(
+      fs.readFileSync(pkgbuild, 'utf8'),
+      /    "fangd>=\$\{pkgver\}" "fangd<\$\{_fangd_upper\}"/,
+      dependencyLine
+    )
+  );
+  const result = run(dir, 'check');
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stderr, /Pacman.*release line/i);
+  fs.rmSync(dir, { recursive: true });
+});
+
+test('check preserves Pacman daemon bounds after a within-word line continuation', () => {
+  const dir = fixture();
+  const pkgbuild = path.join(dir, 'packaging/arch/PKGBUILD');
+  const dependencyLine = [
+    '    glibc\\',
+    '# "fangd>=${pkgver}" "fangd<${_fangd_upper}"'
+  ].join('\n');
+  fs.writeFileSync(
+    pkgbuild,
+    mutateFixture(
+      fs.readFileSync(pkgbuild, 'utf8'),
+      /    "fangd>=\$\{pkgver\}" "fangd<\$\{_fangd_upper\}"/,
+      dependencyLine
+    )
+  );
+  const result = run(dir, 'check');
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /VFang version sync OK: 0\.9\.9/);
+  fs.rmSync(dir, { recursive: true });
+});
+
 test('check preserves Pacman daemon bounds after an unquoted hash within a dependency word', () => {
   const dir = fixture();
   const pkgbuild = path.join(dir, 'packaging/arch/PKGBUILD');
