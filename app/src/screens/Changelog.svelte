@@ -2,6 +2,19 @@
   // Mirrors CHANGELOG.md, condensed for the panel. Newest first.
   const RELEASES = [
     {
+      version: '0.9.8',
+      date: '2026-07-30',
+      title: 'Wayland window controls',
+      groups: [
+        {
+          kind: 'Fixed',
+          items: [
+            'Native close, minimize, maximize, and resize controls remain responsive on GNOME Wayland, including after close-to-tray restoration and second-launch activation.'
+          ]
+        }
+      ]
+    },
+    {
       version: '0.9.7',
       date: '2026-07-30',
       title: 'VFang rebrand and Fedora detection repair',

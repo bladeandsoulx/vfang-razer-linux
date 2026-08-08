@@ -114,10 +114,10 @@ bash install.sh
 This lets you read the script before it asks for administrator access.
 
 For an extra integrity check, download the installer and checksum manifest from
-the pinned v0.9.7 release:
+the pinned v0.9.8 release:
 
 ```bash
-curl -fLO 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/download/v0.9.7/{install.sh,SHA256SUMS}'
+curl -fLO 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/download/v0.9.8/{install.sh,SHA256SUMS}'
 grep '  install.sh$' SHA256SUMS > install.sh.sha256
 sha256sum --check install.sh.sha256
 ```
@@ -131,10 +131,10 @@ Download both packages from the same release, then install them together:
 
 ```bash
 # Ubuntu or Debian
-sudo apt install ./fangd_0.9.7-1_amd64.deb ./Fang_0.9.7_amd64.deb
+sudo apt install ./fangd_0.9.8-1_amd64.deb ./Fang_0.9.8_amd64.deb
 
 # Fedora 43 or 44
-sudo dnf install ./fangd-0.9.7-1.x86_64.rpm ./fang-0.9.7-1.x86_64.rpm
+sudo dnf install ./fangd-0.9.8-1.x86_64.rpm ./fang-0.9.8-1.x86_64.rpm
 ```
 
 Enable the background service and give your user access:

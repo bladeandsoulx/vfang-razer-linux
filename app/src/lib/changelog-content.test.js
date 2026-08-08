@@ -9,6 +9,7 @@ const panel = fs.readFileSync(path.join(root, 'app/src/screens/Changelog.svelte'
 const changelog = fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
 
 test('the in-app changelog contains the latest releases in descending order', () => {
+  const v098 = panel.indexOf("version: '0.9.8'");
   const v097 = panel.indexOf("version: '0.9.7'");
   const v096 = panel.indexOf("version: '0.9.6'");
   const v095 = panel.indexOf("version: '0.9.5'");
@@ -16,12 +17,31 @@ test('the in-app changelog contains the latest releases in descending order', ()
   const v093 = panel.indexOf("version: '0.9.3'");
   const v092 = panel.indexOf("version: '0.9.2'");
 
-  assert.ok(v097 >= 0, 'v0.9.7 must be present');
+  assert.ok(v098 >= 0, 'v0.9.8 must be present');
+  assert.ok(v097 > v098, 'v0.9.7 must follow v0.9.8');
   assert.ok(v096 > v097, 'v0.9.6 must follow v0.9.7');
   assert.ok(v095 > v096, 'v0.9.5 must follow v0.9.6');
   assert.ok(v094 > v095, 'v0.9.4 must follow v0.9.5');
   assert.ok(v093 > v094, 'v0.9.3 must follow v0.9.4');
   assert.ok(v092 > v093, 'v0.9.2 must follow v0.9.3');
+});
+
+test('v0.9.8 records the Wayland window-controls repair', () => {
+  const v098Start = panel.indexOf("version: '0.9.8'");
+  const v097Start = panel.indexOf("version: '0.9.7'");
+  const v098Panel = panel.slice(v098Start, v097Start);
+  const v098Changelog = changelog.slice(
+    changelog.indexOf('## [0.9.8]'),
+    changelog.indexOf('## [0.9.7]')
+  );
+
+  assert.ok(v098Start >= 0, 'v0.9.8 must be present');
+  assert.ok(v097Start > v098Start, 'v0.9.7 must follow v0.9.8');
+  assert.match(v098Panel, /GNOME Wayland/i);
+  assert.match(v098Panel, /close.*minimize.*maximize.*resize/i);
+  assert.match(v098Changelog, /## \[0\.9\.8\].*Wayland window controls/);
+  assert.match(v098Changelog, /close-to-tray/i);
+  assert.match(v098Changelog, /second-launch/i);
 });
 
 test('v0.9.7 records the VFang rebrand and Fedora detection repair', () => {

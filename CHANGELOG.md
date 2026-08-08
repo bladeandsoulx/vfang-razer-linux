@@ -4,6 +4,14 @@ All notable changes to VFang are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.9.8] — 2026-07-30 — Wayland window controls
+
+### Fixed
+
+- Native close, minimize, maximize, and resize controls remain responsive on
+  GNOME Wayland, including after close-to-tray restoration and second-launch
+  activation.
+
 ## [0.9.7] — 2026-07-30 — VFang rebrand and Fedora detection repair
 
 ### Changed
@@ -379,6 +387,7 @@ All notable changes to VFang are documented here. The format is based on
 - Privileged `fangd` daemon + unprivileged Tauri/Svelte app over a Unix socket;
   settings persist and re-apply after reboot and suspend/resume.
 
+[0.9.8]: https://github.com/bladeandsoulx/vfang-razer-linux/releases/tag/v0.9.8
 [0.9.7]: https://github.com/bladeandsoulx/vfang-razer-linux/releases/tag/v0.9.7
 [0.9.6]: https://github.com/bladeandsoulx/vfang-razer-linux/releases/tag/v0.9.6
 [0.9.5]: https://github.com/bladeandsoulx/vfang-razer-linux/releases/tag/v0.9.5
