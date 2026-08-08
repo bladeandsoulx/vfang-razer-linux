@@ -47,7 +47,7 @@ test('packaging presents VFang while retaining every technical identity', () => 
   assert.equal(config.identifier, 'dev.fang.app');
   assert.equal(config.bundle.linux.deb.desktopTemplate, 'vfang.desktop');
   assert.deepEqual(config.bundle.linux.deb.depends, [
-    'fangd (>= 0.9.7)',
+    'fangd (>= 0.9.8)',
     'fangd (<< 0.10.0)'
   ]);
 
