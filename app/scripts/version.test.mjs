@@ -91,6 +91,21 @@ test('check requires Pacman daemon bounds in the desktop package dependencies', 
   fs.rmSync(dir, { recursive: true });
 });
 
+test('check rejects Pacman daemon bounds hidden by an inline comment', () => {
+  const dir = fixture();
+  const pkgbuild = path.join(dir, 'packaging/arch/PKGBUILD');
+  const malformed = mutateFixture(
+    fs.readFileSync(pkgbuild, 'utf8'),
+    /    "fangd>=\$\{pkgver\}" "fangd<\$\{_fangd_upper\}"/,
+    '    glibc # "fangd>=${pkgver}" "fangd<${_fangd_upper}"'
+  );
+  fs.writeFileSync(pkgbuild, malformed);
+  const result = run(dir, 'check');
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stderr, /Pacman.*release line/i);
+  fs.rmSync(dir, { recursive: true });
+});
+
 test('check rejects malformed multiline Pacman fields', () => {
   for (const name of ['pkgver', 'pkgrel', '_fangd_upper']) {
     const dir = fixture();

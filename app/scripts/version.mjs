@@ -104,17 +104,57 @@ function replacePkgbuildField(text, name, value) {
   );
 }
 
+function stripPkgbuildComments(text) {
+  let result = '';
+  let quote = '';
+  let escaped = false;
+  let comment = false;
+  for (const character of text) {
+    if (comment) {
+      if (character === '\n') {
+        comment = false;
+        result += character;
+      }
+      continue;
+    }
+    if (escaped) {
+      escaped = false;
+      result += character;
+      continue;
+    }
+    if (character === '\\' && quote !== "'") {
+      escaped = true;
+      result += character;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) quote = '';
+      result += character;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      result += character;
+    } else if (character === '#') {
+      comment = true;
+    } else {
+      result += character;
+    }
+  }
+  return result;
+}
+
 function pkgbuildDesktopDependencies(text) {
   const desktopPackage = capture(
     'Pacman desktop package',
     text,
     /^package_fang\(\)[^\S\r\n]*\{([\s\S]*?)^\}/m
   );
-  return capture(
+  return stripPkgbuildComments(capture(
     'Pacman desktop dependencies',
     desktopPackage,
     /^[^\S\r\n]*depends=\(\n([\s\S]*?)^[^\S\r\n]*\)/m
-  ).replace(/^[^\S\r\n]*#.*(?:\n|$)/gm, '');
+  ));
 }
 
 function currentVersions() {
