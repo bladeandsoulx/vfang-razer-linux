@@ -120,16 +120,54 @@ test('Pacman metadata inspector requires exactly one .PKGINFO member', () => {
 
 test('Pacman metadata inspector extracts the sole raw .PKGINFO member', () => {
   const calls = [];
-  const metadata = inspectPacman('fang-0.9.9-1-x86_64.pkg.tar.zst', (command, args) => {
+  const runCommand = (command, args) => {
     calls.push([command, args]);
     if (args[0] === '-tf') return '.PKGINFO\nusr/bin/fang\n';
     return 'pkgname = fang\npkgver = 0.9.9-1\narch = x86_64\n';
-  });
+  };
+  const metadata = inspectPacman('fang-0.9.9-1-x86_64.pkg.tar.zst', runCommand);
   assert.deepEqual(metadata, { name: 'fang', version: '0.9.9-1', arch: 'x86_64' });
   assert.deepEqual(calls, [
     ['bsdtar', ['-tf', 'fang-0.9.9-1-x86_64.pkg.tar.zst']],
     ['bsdtar', ['-xOf', 'fang-0.9.9-1-x86_64.pkg.tar.zst', '.PKGINFO']]
   ]);
+});
+
+test('Pacman metadata inspector preserves raw trailing bytes from its default command path', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-pacman-inspect-'));
+  const bin = path.join(root, 'bin');
+  const bsdtar = path.join(bin, 'bsdtar');
+  const originalPath = process.env.PATH;
+  const originalPkgInfo = process.env.FANG_TEST_PKGINFO;
+  fs.mkdirSync(bin);
+  fs.writeFileSync(
+    bsdtar,
+    `#!/usr/bin/env bash
+case "$1" in
+  -tf) printf '.PKGINFO\\n' ;;
+  -xOf) printf '%s' "$FANG_TEST_PKGINFO" ;;
+esac
+`,
+    { mode: 0o755 }
+  );
+  process.env.PATH = `${bin}:${originalPath}`;
+  try {
+    for (const metadata of [
+      'pkgname = fang\npkgver = 0.9.9-1\narch = x86_64 \n',
+      'pkgname = fang\npkgver = 0.9.9-1\narch = x86_64\r'
+    ]) {
+      process.env.FANG_TEST_PKGINFO = metadata;
+      assert.throws(
+        () => inspectPacman('fang-0.9.9-1-x86_64.pkg.tar.zst'),
+        /malformed Pacman metadata line/
+      );
+    }
+  } finally {
+    process.env.PATH = originalPath;
+    if (originalPkgInfo === undefined) delete process.env.FANG_TEST_PKGINFO;
+    else process.env.FANG_TEST_PKGINFO = originalPkgInfo;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('Pacman metadata parser rejects duplicate and missing scalar fields', () => {

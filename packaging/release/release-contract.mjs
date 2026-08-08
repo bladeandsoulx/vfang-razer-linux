@@ -55,11 +55,15 @@ export function validateManifest(text, expectedNames) {
 }
 
 function commandFields(command, args) {
-  return execFileSync(command, args, { encoding: 'utf8' }).trimEnd().split('\n');
+  return commandValue(command, args).split('\n');
+}
+
+function commandRaw(command, args) {
+  return execFileSync(command, args, { encoding: 'utf8' });
 }
 
 function commandValue(command, args) {
-  return execFileSync(command, args, { encoding: 'utf8' }).trimEnd();
+  return commandRaw(command, args).trimEnd();
 }
 
 export function inspectDeb(file, runCommand = commandValue) {
@@ -81,6 +85,7 @@ export function parsePacmanPkgInfo(text) {
     if (!match) throw new Error(`malformed Pacman metadata line: ${line}`);
     const [, key, value] = match;
     if (['pkgname', 'pkgver', 'arch'].includes(key)) {
+      if (value !== value.trim()) throw new Error(`malformed Pacman metadata line: ${line}`);
       if (scalars.has(key)) throw new Error(`duplicate Pacman metadata field: ${key}`);
       scalars.set(key, value);
     }
@@ -100,7 +105,8 @@ export function inspectPacman(file, runCommand = commandValue) {
   if (members.filter((name) => name === '.PKGINFO').length !== 1) {
     throw new Error(`${path.basename(file)} must contain exactly one .PKGINFO member`);
   }
-  return parsePacmanPkgInfo(runCommand('bsdtar', ['-xOf', file, '.PKGINFO']));
+  const extract = runCommand === commandValue ? commandRaw : runCommand;
+  return parsePacmanPkgInfo(extract('bsdtar', ['-xOf', file, '.PKGINFO']));
 }
 
 const inspectPacmanDefault = inspectPacman;
