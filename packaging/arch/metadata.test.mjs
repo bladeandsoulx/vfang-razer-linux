@@ -43,3 +43,15 @@ test('daemon package uses systemd sysusers and both packages ship licenses', () 
   assert.equal(read('packaging/fang.sysusers'), 'g fang - -\n');
   assert.match(read('packaging/fang.desktop'), /^Name=VFang$/m);
 });
+
+test('lifecycle verifier covers package integrity, smoke tests, and removal', () => {
+  const verify = read('packaging/arch/verify.sh');
+  assert.match(verify, /namcap/);
+  assert.match(verify, /pacman -U --noconfirm/);
+  assert.match(verify, /pacman -Qkk fang fangd/);
+  assert.match(verify, /systemd-analyze verify/);
+  assert.match(verify, /mock_smoke\.py/);
+  assert.match(verify, /dbus-run-session/);
+  assert.match(verify, /xvfb-run/);
+  assert.match(verify, /pacman -Rns --noconfirm fang fangd/);
+});
