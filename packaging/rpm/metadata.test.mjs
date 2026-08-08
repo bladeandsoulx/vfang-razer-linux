@@ -33,8 +33,8 @@ test('desktop spec owns strict daemon bounds and the tray runtime', () => {
 });
 
 test('sysusers and desktop files expose the required identities', () => {
-  assert.equal(read('packaging/rpm/fang.sysusers'), 'g fang - -\n');
-  const desktop = read('packaging/rpm/fang.desktop');
+  assert.equal(read('packaging/fang.sysusers'), 'g fang - -\n');
+  const desktop = read('packaging/fang.desktop');
   assert.match(desktop, /^\[Desktop Entry\]$/m);
   assert.match(desktop, /^Exec=fang$/m);
   assert.match(desktop, /^Icon=fang$/m);
@@ -56,7 +56,7 @@ test('packaging presents VFang while retaining every technical identity', () => 
   assert.match(debDesktop, /^Exec=\{\{exec\}\}$/m);
   assert.match(debDesktop, /^Icon=\{\{icon\}\}$/m);
 
-  const rpmDesktop = read('packaging/rpm/fang.desktop');
+  const rpmDesktop = read('packaging/fang.desktop');
   assert.match(rpmDesktop, /^Name=VFang$/m);
   assert.match(rpmDesktop, /^Exec=fang$/m);
   assert.match(rpmDesktop, /^Icon=fang$/m);

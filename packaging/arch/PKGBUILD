@@ -1,0 +1,56 @@
+pkgbase=vfang
+pkgname=(fang fangd)
+pkgver=0.9.8
+pkgrel=1
+_fangd_upper=0.10.0
+pkgdesc='Razer Blade control center and privileged hardware daemon'
+arch=(x86_64)
+url='https://github.com/bladeandsoulx/vfang-razer-linux'
+license=('GPL-2.0-only')
+options=('!debug')
+source=(
+  fang
+  fangd
+  fangd.service
+  fang.sysusers
+  fang.desktop
+  LICENSE
+  fang-32.png
+  fang-128.png
+  fang-256.png
+  fang-512.png
+)
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+package_fangd() {
+  pkgdesc='Privileged hardware-control daemon for VFang'
+  depends=(glibc libgcc systemd systemd-libs)
+
+  install -Dpm0755 "$srcdir/fangd" "$pkgdir/usr/bin/fangd"
+  install -Dpm0644 "$srcdir/fangd.service" \
+    "$pkgdir/usr/lib/systemd/system/fangd.service"
+  install -Dpm0644 "$srcdir/fang.sysusers" \
+    "$pkgdir/usr/lib/sysusers.d/fang.conf"
+  install -Dpm0644 "$srcdir/LICENSE" \
+    "$pkgdir/usr/share/licenses/fangd/LICENSE"
+}
+
+package_fang() {
+  pkgdesc='Razer Blade control center for Linux'
+  depends=(
+    cairo dbus gdk-pixbuf2 glib2 glibc gtk3 hicolor-icon-theme
+    libayatana-appindicator libgcc libsoup3 webkit2gtk-4.1
+    "fangd>=${pkgver}" "fangd<${_fangd_upper}"
+  )
+
+  install -Dpm0755 "$srcdir/fang" "$pkgdir/usr/bin/fang"
+  install -Dpm0644 "$srcdir/fang.desktop" \
+    "$pkgdir/usr/share/applications/fang.desktop"
+  install -Dpm0644 "$srcdir/LICENSE" \
+    "$pkgdir/usr/share/licenses/fang/LICENSE"
+  local size
+  for size in 32 128 256 512; do
+    install -Dpm0644 "$srcdir/fang-${size}.png" \
+      "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/fang.png"
+  done
+}
