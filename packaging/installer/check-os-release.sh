@@ -77,7 +77,13 @@ write_probe_command curl \
     "trap 'status=\$?; printf \"%s\\n\" \"\$status\" > \"\$FANG_INSTALLER_PROBE_CURL_STATUS_FILE\"' EXIT" \
     "printf '%s\\n' '$probe_stop_marker' >&2" \
     "exit $probe_stop_status"
-for command in sudo apt-get dnf systemctl usermod; do
+for command in sudo apt-get dnf pacman systemctl usermod; do
+    write_probe_command "$command" \
+        '#!/usr/bin/env bash' \
+        "printf '%s\\n' '$mutation_block_marker' >&2" \
+        "exit $mutation_block_status"
+done
+for command in vercmp bsdtar; do
     write_probe_command "$command" \
         '#!/usr/bin/env bash' \
         "printf '%s\\n' '$mutation_block_marker' >&2" \

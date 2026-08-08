@@ -227,7 +227,7 @@ case "\${1:-}" in
 esac
 `
   );
-  for (const command of ['apt-get', 'dnf', 'usermod']) {
+  for (const command of ['apt-get', 'dnf', 'pacman', 'vercmp', 'bsdtar', 'usermod']) {
     executable(
       path.join(bin, command),
       `#!/usr/bin/env bash\nprintf '${command} %s\\n' "$*" >> "\${FANG_TEST_LOG}"\nexit 0\n`
@@ -310,6 +310,37 @@ const directPlatforms = [
     'RPM'
   ]
 ];
+
+for (const [label, osRelease] of [
+  ['Arch Linux', 'ID=arch\nBUILD_ID=rolling\n'],
+  ['CachyOS', 'ID=cachyos\nBUILD_ID=rolling\n']
+]) {
+  test(`detects rolling ${label} without a version gate`, () => {
+    const fixture = makeFixture({ osRelease, curlFailure: 'SHA256SUMS' });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0);
+    assert.match(result.stdout, new RegExp(`Detected: linux \\(${label}\\)`));
+    assert.match(result.stderr, /Download failed: SHA256SUMS/);
+    assert.doesNotMatch(fixture.commands(), /^sudo /m);
+    fixture.cleanup();
+  });
+}
+
+for (const id of ['endeavouros', 'garuda', 'manjaro']) {
+  test(`accepts ${id} through the Arch compatible-family path`, () => {
+    const fixture = makeFixture({
+      osRelease: `ID=${id}\nID_LIKE=arch\n`,
+      curlFailure: 'SHA256SUMS'
+    });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0);
+    assert.match(result.stdout, new RegExp(`${id} → Arch Linux family`));
+    assert.match(result.stdout, /compatible-family, not release-tested directly/);
+    assert.match(result.stderr, /Download failed: SHA256SUMS/);
+    assert.doesNotMatch(fixture.commands(), /^sudo /m);
+    fixture.cleanup();
+  });
+}
 
 for (const [label, osRelease, family] of directPlatforms) {
   test(`detects ${label}`, () => {
@@ -429,25 +460,46 @@ test('Fedora derivatives require an exact VERSION_ID:CPE_NAME pair before downlo
 // Fedora 43 removing PLATFORM_ID went unnoticed precisely because only
 // hand-written fixtures existed.
 const realOsReleaseDir = path.join(root, 'packaging/installer/os-release');
+const realPlatforms = new Map([
+  ['arch-container', ['Arch Linux', 'PACMAN']],
+  ['cachyos-container', ['Arch Linux', 'PACMAN']],
+  ['debian-12', ['Debian 12', 'DEB']],
+  ['debian-13', ['Debian 13', 'DEB']],
+  ['fedora-43', ['Fedora 43', 'RPM']],
+  ['fedora-44', ['Fedora 44', 'RPM']],
+  ['ubuntu-22.04', ['Ubuntu 22.04', 'DEB']],
+  ['ubuntu-24.04', ['Ubuntu 24.04', 'DEB']],
+  ['ubuntu-26.04', ['Ubuntu 26.04', 'DEB']]
+]);
 
 test('detection accepts the real os-release of every tested image', () => {
   const files = fs.readdirSync(realOsReleaseDir).sort();
-  assert.ok(files.length >= 7, 'captured os-release projections are missing');
+  assert.deepEqual(files, [...realPlatforms.keys()].sort());
 
   for (const file of files) {
-    const [distro, release] = file.split('-');
-    assert.ok(distro && release, `unparseable capture name: ${file}`);
-    const label = `${distro[0].toUpperCase()}${distro.slice(1)} ${release}`;
+    const [label, family] = realPlatforms.get(file);
     const osRelease = fs.readFileSync(path.join(realOsReleaseDir, file), 'utf8');
 
-    const fixture = makeFixture({ osRelease });
+    const fixture = makeFixture({
+      osRelease,
+      ...(family === 'PACMAN' ? { curlFailure: 'SHA256SUMS' } : {})
+    });
     const result = fixture.run();
-    assert.equal(result.status, 0, `${file}\n${result.stdout}${result.stderr}`);
+    if (family === 'PACMAN') {
+      assert.notEqual(result.status, 0, `${file}\n${result.stdout}${result.stderr}`);
+      assert.match(result.stderr, /Download failed: SHA256SUMS/);
+    } else {
+      assert.equal(result.status, 0, `${file}\n${result.stdout}${result.stderr}`);
+    }
     assert.match(
       result.stdout,
       new RegExp(`Detected: linux \\(${label.replace('.', '\\.')}\\)`)
     );
-    assert.match(fixture.commands(), distro === 'fedora' ? /\.rpm/ : /\.deb/);
+    if (family === 'DEB') {
+      assert.match(fixture.commands(), /\.deb/);
+    } else if (family === 'RPM') {
+      assert.match(fixture.commands(), /\.rpm/);
+    }
     fixture.cleanup();
   }
 });
@@ -494,6 +546,23 @@ test('refuses malformed, duplicate, unsupported, and conflicting platform data',
     const fixture = makeFixture({ osRelease });
     const result = fixture.run();
     assert.notEqual(result.status, 0, osRelease);
+    assert.doesNotMatch(fixture.commands(), /^sudo /m);
+    fixture.cleanup();
+  }
+});
+
+test('refuses conflicting Arch, DEB, and RPM family markers before download or sudo', () => {
+  const cases = [
+    'ID=hybrid\nID_LIKE="arch debian"\n',
+    'ID=hybrid\nID_LIKE="arch fedora"\n',
+    'ID=arch\nID_LIKE=debian\n'
+  ];
+  for (const osRelease of cases) {
+    const fixture = makeFixture({ osRelease });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0, osRelease);
+    assert.match(result.stderr, /Conflicting distribution-family markers/);
+    assert.doesNotMatch(fixture.commands(), /^curl /m);
     assert.doesNotMatch(fixture.commands(), /^sudo /m);
     fixture.cleanup();
   }

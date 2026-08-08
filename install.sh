@@ -198,13 +198,36 @@ id_like_has() {
 }
 
 detect_platform() {
+  local deb_like=0
+  local rpm_like=0
+  local arch_like=0
+  local family_count=0
   local ubuntu_like=0
   local debian_like=0
-  local fedora_like=0
 
   PACKAGE_FAMILY=
   PLATFORM_LABEL=
   DERIVATIVE_WARNING=
+
+  case $OS_ID in
+    ubuntu|debian) deb_like=1 ;;
+    fedora) rpm_like=1 ;;
+    arch|cachyos) arch_like=1 ;;
+  esac
+  if id_like_has ubuntu; then
+    ubuntu_like=1
+    deb_like=1
+  fi
+  if id_like_has debian; then
+    debian_like=1
+    deb_like=1
+  fi
+  id_like_has fedora && rpm_like=1
+  id_like_has arch && arch_like=1
+  ((deb_like)) && ((family_count += 1))
+  ((rpm_like)) && ((family_count += 1))
+  ((arch_like)) && ((family_count += 1))
+  ((family_count <= 1)) || fatal "Conflicting distribution-family markers for $OS_ID."
 
   case $OS_ID in
     ubuntu)
@@ -237,14 +260,17 @@ detect_platform() {
       esac
       return
       ;;
+    arch)
+      PACKAGE_FAMILY=pacman
+      PLATFORM_LABEL='Arch Linux'
+      return
+      ;;
+    cachyos)
+      PACKAGE_FAMILY=pacman
+      PLATFORM_LABEL='CachyOS'
+      return
+      ;;
   esac
-
-  id_like_has ubuntu && ubuntu_like=1
-  id_like_has debian && debian_like=1
-  id_like_has fedora && fedora_like=1
-  if ((fedora_like && (ubuntu_like || debian_like))); then
-    fatal "Conflicting distribution-family markers for $OS_ID."
-  fi
 
   if ((ubuntu_like)); then
     case $OS_UBUNTU_CODENAME in
@@ -259,7 +285,7 @@ detect_platform() {
       trixie) PACKAGE_FAMILY=deb; PLATFORM_LABEL='Debian 13' ;;
       *) fatal "Unsupported or missing Debian base for $OS_ID." ;;
     esac
-  elif ((fedora_like)); then
+  elif ((rpm_like)); then
     case $OS_VERSION_ID:$OS_CPE_NAME in
       43:cpe:/o:fedoraproject:fedora:43)
         PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 43' ;;
@@ -267,6 +293,9 @@ detect_platform() {
         PACKAGE_FAMILY=rpm; PLATFORM_LABEL='Fedora 44' ;;
       *) fatal "Unsupported or missing Fedora base for $OS_ID." ;;
     esac
+  elif ((arch_like)); then
+    PACKAGE_FAMILY=pacman
+    PLATFORM_LABEL='Arch Linux'
   else
     fatal "Unsupported Linux distribution: $OS_ID."
   fi
@@ -294,11 +323,12 @@ capture_identity() {
 require_commands() {
   local command
   local commands=(curl sha256sum uname id getent mktemp systemctl sudo usermod)
-  if [[ $PACKAGE_FAMILY == deb ]]; then
-    commands+=(dpkg dpkg-deb dpkg-query apt-get)
-  else
-    commands+=(rpm dnf)
-  fi
+  case $PACKAGE_FAMILY in
+    deb) commands+=(dpkg dpkg-deb dpkg-query apt-get) ;;
+    rpm) commands+=(rpm dnf) ;;
+    pacman) commands+=(pacman vercmp bsdtar) ;;
+    *) fatal "Unsupported package family: $PACKAGE_FAMILY" ;;
+  esac
   for command in "${commands[@]}"; do
     command -v "$command" >/dev/null 2>&1 || fatal "Missing required command: $command"
   done

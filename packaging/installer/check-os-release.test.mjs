@@ -85,18 +85,23 @@ test('real-file probe rejects an incorrect expected platform label', () => {
   assert.match(result.stderr, /installer detected/i);
 });
 
-test('real-file probe accepts the actual installer stopping at the curl sentinel', () => {
-  const name = 'debian-12';
-  const identityFile = path.join(root, 'packaging/installer/os-release', name);
+for (const [name, expectedPlatform] of [
+  ['arch-container', 'Arch Linux'],
+  ['cachyos-container', 'Arch Linux'],
+  ['debian-12', 'Debian 12']
+]) {
+  test(`real-file probe accepts ${name} stopping at the curl sentinel`, () => {
+    const identityFile = path.join(root, 'packaging/installer/os-release', name);
 
-  const result = spawnSync('bash', [helper, name, 'Debian 12'], {
-    encoding: 'utf8',
-    env: { ...process.env, FANG_OS_RELEASE_FILE: identityFile }
+    const result = spawnSync('bash', [helper, name, expectedPlatform], {
+      encoding: 'utf8',
+      env: { ...process.env, FANG_OS_RELEASE_FILE: identityFile }
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, new RegExp(`^${stoppedMarker}$`, 'm'));
+    assert.doesNotMatch(result.stdout + result.stderr, /blocked system mutation/);
   });
-  assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.match(result.stdout, new RegExp(`^${stoppedMarker}$`, 'm'));
-  assert.doesNotMatch(result.stdout + result.stderr, /blocked system mutation/);
-});
+}
 
 test('real-file probe accepts only the curl stop sentinel', () => {
   const fixture = makeProbeFixture();
