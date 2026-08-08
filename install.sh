@@ -326,7 +326,7 @@ require_commands() {
   case $PACKAGE_FAMILY in
     deb) commands+=(dpkg dpkg-deb dpkg-query apt-get) ;;
     rpm) commands+=(rpm dnf) ;;
-    pacman) commands+=(pacman vercmp bsdtar) ;;
+    pacman) commands+=(pacman vercmp bsdtar grep) ;;
     *) fatal "Unsupported package family: $PACKAGE_FAMILY" ;;
   esac
   for command in "${commands[@]}"; do
@@ -460,6 +460,19 @@ verify_rpm_metadata() {
   verify_rpm_file "$WORK_DIR/$RPM_FANGD" fangd
 }
 
+reject_control_bytes() {
+  local file=$1
+  local description=$2
+  local grep_status
+
+  if LC_ALL=C grep -a -q '[[:cntrl:]]' "$file"; then
+    fatal "$description contains a control character."
+  else
+    grep_status=$?
+    [[ $grep_status == 1 ]] || fatal "Could not validate $description."
+  fi
+}
+
 verify_pacman_file() {
   local file=$1
   local expected_name=$2
@@ -480,6 +493,7 @@ verify_pacman_file() {
   local version_remainder=${VERSION#*.}
   local version_minor
   local upper_bound
+  local pkginfo_file="$WORK_DIR/PACMAN_PKGINFO"
   local members=()
   declare -A seen=()
 
@@ -495,8 +509,10 @@ verify_pacman_file() {
   [[ $pkginfo_count == 1 ]] ||
     fatal "Invalid Pacman package metadata in ${file##*/}: expected exactly one .PKGINFO member."
 
-  output=$(bsdtar -xOf "$file" .PKGINFO) ||
+  if ! bsdtar -xOf "$file" .PKGINFO > "$pkginfo_file"; then
     fatal "Could not extract Pacman package metadata from ${file##*/}."
+  fi
+  reject_control_bytes "$pkginfo_file" "Pacman package metadata in ${file##*/}"
   while IFS= read -r line || [[ -n $line ]]; do
     [[ -z $line || $line == \#* ]] && continue
     if [[ $line =~ ^([a-z][a-z0-9_]*)\ =\ ([[:print:]]*)$ ]]; then
@@ -524,7 +540,7 @@ verify_pacman_file() {
         fi
         ;;
     esac
-  done <<< "$output"
+  done < "$pkginfo_file"
 
   [[ $pkgname == "$expected_name" ]] ||
     fatal "Invalid Pacman package metadata in ${file##*/}: pkgname is '$pkgname'."
@@ -635,14 +651,16 @@ rpm_state() {
 
 pacman_state() {
   local package=$1 selected=$2 state_destination=$3 version_destination=$4
-  local output name installed_version comparison state
+  local name installed_version comparison state
+  local state_file="$WORK_DIR/PACMAN_STATE"
   local records=()
-  if ! output=$(pacman -Q -- "$package" 2>/dev/null); then
+  if ! pacman -Q -- "$package" > "$state_file" 2>/dev/null; then
     printf -v "$state_destination" '%s' absent
     printf -v "$version_destination" '%s' '<absent>'
     return
   fi
-  mapfile -t records <<< "$output"
+  reject_control_bytes "$state_file" "Installed Pacman state for $package"
+  mapfile -t records < "$state_file"
   [[ ${#records[@]} == 1 ]] || fatal "Installed Pacman state is ambiguous for $package: ${#records[@]} records."
   read -r name installed_version extra <<< "${records[0]}"
   [[ $name == "$package" && -n $installed_version && -z ${extra:-} ]] ||

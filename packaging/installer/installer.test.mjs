@@ -66,6 +66,7 @@ function makeFixture({
   serviceBecomesActive = true,
   systemctlEnableFailure = false,
   pacmanFailure = false,
+  pacmanNulMetadata = '',
   vercmpOutput = ''
 }) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-installer-test-'));
@@ -261,14 +262,33 @@ esac
 printf 'bsdtar %s\\n' "$*" >> "\${FANG_TEST_LOG}"
 file="\${2:-}"
 case "\${file##*/}" in
-  fangd-*) members="\${FANG_TEST_PACMAN_FANGD_MEMBERS}"; pkginfo="\${FANG_TEST_PACMAN_FANGD_PKGINFO}" ;;
-  fang-*) members="\${FANG_TEST_PACMAN_FANG_MEMBERS}"; pkginfo="\${FANG_TEST_PACMAN_FANG_PKGINFO}" ;;
+  fangd-*) package=fangd; members="\${FANG_TEST_PACMAN_FANGD_MEMBERS}"; pkginfo="\${FANG_TEST_PACMAN_FANGD_PKGINFO}" ;;
+  fang-*) package=fang; members="\${FANG_TEST_PACMAN_FANG_MEMBERS}"; pkginfo="\${FANG_TEST_PACMAN_FANG_PKGINFO}" ;;
   *) exit 2 ;;
 esac
 case "\${1:-}" in
   -tf) printf '%s\\n' "$members" ;;
   -xOf)
     [[ "\${3:-}" == .PKGINFO ]] || exit 2
+    if [[ "$package" == fang ]]; then
+      case "\${FANG_TEST_PACMAN_NUL_METADATA}" in
+        pkgname)
+          printf '%s\\n' '# package fixture' ''
+          printf 'pkgname = fa\\0ng\\n'
+          printf '%s\\n' 'pkgver = ${pacmanVersion}' 'arch = x86_64' \
+            'license = GPL-3.0-or-later' 'depend = fangd>=${version}' \
+            'depend = fangd<${pacmanUpperBound}'
+          exit 0
+          ;;
+        dependency)
+          printf '%s\\n' '# package fixture' '' 'pkgname = fang' \
+            'pkgver = ${pacmanVersion}' 'arch = x86_64' 'license = GPL-3.0-or-later'
+          printf 'depend = fangd>\\0=${version}\\n'
+          printf '%s\\n' 'depend = fangd<${pacmanUpperBound}'
+          exit 0
+          ;;
+      esac
+    fi
     printf '%s\\n' "$pkginfo"
     ;;
   *) exit 2 ;;
@@ -337,6 +357,7 @@ fi
     FANG_TEST_SERVICE_BECOMES_ACTIVE: serviceBecomesActive ? '1' : '0',
     FANG_TEST_SYSTEMCTL_ENABLE_FAILURE: systemctlEnableFailure ? '1' : '0',
     FANG_TEST_PACMAN_FAILURE: pacmanFailure ? '1' : '0',
+    FANG_TEST_PACMAN_NUL_METADATA: pacmanNulMetadata,
     FANG_TEST_VERCMP_OUTPUT: vercmpOutput,
     FANG_TEST_SERVICE_STATE: serviceState,
     FANG_TEST_HOME: path.join(dir, 'home'),
@@ -819,6 +840,17 @@ test('rejects malformed Pacman archive members and PKGINFO fields before sudo', 
   }
 });
 
+for (const pacmanNulMetadata of ['pkgname', 'dependency']) {
+  test(`rejects embedded NUL in Pacman ${pacmanNulMetadata} metadata before sudo`, () => {
+    const fixture = makeFixture({ osRelease: 'ID=arch\n', pacmanNulMetadata });
+    const result = fixture.run();
+    assert.notEqual(result.status, 0, pacmanNulMetadata);
+    assert.match(result.stderr, /metadata|control/i, pacmanNulMetadata);
+    assert.doesNotMatch(fixture.commands(), /^sudo /m, pacmanNulMetadata);
+    fixture.cleanup();
+  });
+}
+
 test('requires exact desktop fangd bounds and no daemon fangd dependency before sudo', () => {
   const withoutLower = defaultPacmanFangPkginfo.replace(`depend = fangd>=${version}\n`, '');
   const cases = [
@@ -900,6 +932,7 @@ test('rejects malformed Pacman installed records and vercmp output before sudo',
     ['wrong name', { installed: { fang: 'other 0.9.3-1', fangd: '' } }],
     ['extra field', { installed: { fang: 'fang 0.9.3-1 extra', fangd: '' } }],
     ['multiple records', { installed: { fang: 'fang 0.9.3-1\nfang 0.9.3-1', fangd: '' } }],
+    ['trailing blank record', { installed: { fang: `fang ${pacmanVersion}\n`, fangd: '' } }],
     ['wrong daemon name', { installed: { fang: '', fangd: 'otherd 0.9.3-1' } }],
     ['nonnumeric vercmp', { installed: { fang: 'fang 0.9.3-1', fangd: '' }, vercmpOutput: 'newer' }]
   ];
