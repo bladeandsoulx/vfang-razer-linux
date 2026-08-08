@@ -145,12 +145,12 @@ test('publication fixture supplies Node inside its isolated PATH', () => {
   }
 });
 
-test('publisher creates, validates, and publishes one six-asset release', () => {
+test('publisher creates, validates, and publishes one eight-asset release', () => {
   const fixture = makeFixture();
   const result = fixture.run();
   assert.equal(result.status, 0, result.stdout + result.stderr);
   const log = fs.readFileSync(fixture.log, 'utf8');
-  assert.equal((log.match(/uploads\.github\.com/g) ?? []).length, 6);
+  assert.equal((log.match(/uploads\.github\.com/g) ?? []).length, 8);
   assert.equal((log.match(/--method POST .*\/releases$/gm) ?? []).length, 1);
   assert.equal((log.match(/--method PATCH/g) ?? []).length, 1);
   assert.match(log, /immutable-releases/);
@@ -181,7 +181,7 @@ test('release workflow has per-tag concurrency and exact publication gates', () 
   assert.doesNotMatch(source, /softprops\/action-gh-release|create four-package draft/);
 });
 
-test('publisher names six explicit uploads and never mutates an existing release', () => {
+test('publisher names eight explicit uploads and never mutates an existing release', () => {
   const source = fs.readFileSync(publisher, 'utf8');
   for (const name of [
     'install.sh',
@@ -189,7 +189,9 @@ test('publisher names six explicit uploads and never mutates an existing release
     '"Fang_${VERSION}_amd64.deb"',
     '"fangd_${VERSION}-1_amd64.deb"',
     '"fang-${VERSION}-1.x86_64.rpm"',
-    '"fangd-${VERSION}-1.x86_64.rpm"'
+    '"fangd-${VERSION}-1.x86_64.rpm"',
+    '"fang-${VERSION}-1-x86_64.pkg.tar.zst"',
+    '"fangd-${VERSION}-1-x86_64.pkg.tar.zst"'
   ]) {
     assert.ok(source.includes(`upload_asset "$release_id" ${name}`), name);
   }

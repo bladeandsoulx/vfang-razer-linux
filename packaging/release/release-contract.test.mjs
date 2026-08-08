@@ -8,6 +8,8 @@ import test from 'node:test';
 import {
   checksumNames,
   inspectDeb,
+  inspectPacman,
+  parsePacmanPkgInfo,
   releaseNames,
   stageRelease,
   validateManifest
@@ -38,30 +40,21 @@ function runSourceFamilyGuard(osRelease) {
   }
 }
 
-test('0.9.4 owns six exact assets and five checksum entries', () => {
-  assert.deepEqual(releaseNames('0.9.4'), [
+test('0.9.9 owns eight exact assets and seven checksum entries', () => {
+  assert.deepEqual(releaseNames('0.9.9'), [
     'install.sh',
     'SHA256SUMS',
-    'Fang_0.9.4_amd64.deb',
-    'fangd_0.9.4-1_amd64.deb',
-    'fang-0.9.4-1.x86_64.rpm',
-    'fangd-0.9.4-1.x86_64.rpm'
+    'Fang_0.9.9_amd64.deb',
+    'fangd_0.9.9-1_amd64.deb',
+    'fang-0.9.9-1.x86_64.rpm',
+    'fangd-0.9.9-1.x86_64.rpm',
+    'fang-0.9.9-1-x86_64.pkg.tar.zst',
+    'fangd-0.9.9-1-x86_64.pkg.tar.zst'
   ]);
-  assert.deepEqual(
-    checksumNames('0.9.4'),
-    releaseNames('0.9.4').filter((name) => name !== 'SHA256SUMS')
-  );
+  assert.equal(checksumNames('0.9.9').length, 7);
 });
 
-test('0.9.7 rebrand preserves the exact six release assets', () => {
-  assert.deepEqual(releaseNames('0.9.7'), [
-    'install.sh',
-    'SHA256SUMS',
-    'Fang_0.9.7_amd64.deb',
-    'fangd_0.9.7-1_amd64.deb',
-    'fang-0.9.7-1.x86_64.rpm',
-    'fangd-0.9.7-1.x86_64.rpm'
-  ]);
+test('0.9.7 rebrand preserves its historical branding', () => {
   assert.match(read('packaging/install-from-source.sh'), /building the VFang app/);
   assert.match(read('packaging/install-from-source.sh'), /Launch 'VFang'/);
   assert.match(read('packaging/install-from-source.sh'), /Fang_\$\{VERSION\}_amd64\.deb/);
@@ -106,82 +99,195 @@ test('DEB metadata inspection queries every field independently', () => {
   ]);
 });
 
-test('stageRelease creates a deterministic six-asset directory', () => {
+test('Pacman metadata parser accepts the required scalar fields', () => {
+  assert.deepEqual(
+    parsePacmanPkgInfo('pkgname = fang\npkgver = 0.9.9-1\narch = x86_64\n'),
+    { name: 'fang', version: '0.9.9-1', arch: 'x86_64' }
+  );
+});
+
+test('Pacman metadata inspector requires exactly one .PKGINFO member', () => {
+  for (const members of ['usr/bin/fang\n', '.PKGINFO\n.PKGINFO\n']) {
+    assert.throws(
+      () => inspectPacman('fang-0.9.9-1-x86_64.pkg.tar.zst', (_command, args) => {
+        assert.deepEqual(args, ['-tf', 'fang-0.9.9-1-x86_64.pkg.tar.zst']);
+        return members;
+      }),
+      /must contain exactly one \.PKGINFO member/
+    );
+  }
+});
+
+test('Pacman metadata inspector extracts the sole raw .PKGINFO member', () => {
+  const calls = [];
+  const metadata = inspectPacman('fang-0.9.9-1-x86_64.pkg.tar.zst', (command, args) => {
+    calls.push([command, args]);
+    if (args[0] === '-tf') return '.PKGINFO\nusr/bin/fang\n';
+    return 'pkgname = fang\npkgver = 0.9.9-1\narch = x86_64\n';
+  });
+  assert.deepEqual(metadata, { name: 'fang', version: '0.9.9-1', arch: 'x86_64' });
+  assert.deepEqual(calls, [
+    ['bsdtar', ['-tf', 'fang-0.9.9-1-x86_64.pkg.tar.zst']],
+    ['bsdtar', ['-xOf', 'fang-0.9.9-1-x86_64.pkg.tar.zst', '.PKGINFO']]
+  ]);
+});
+
+test('Pacman metadata parser rejects duplicate and missing scalar fields', () => {
+  assert.throws(
+    () => parsePacmanPkgInfo('pkgname = fang\npkgname = fangd\npkgver = 0.9.9-1\narch = x86_64\n'),
+    /duplicate Pacman metadata field: pkgname/
+  );
+  assert.throws(
+    () => parsePacmanPkgInfo('pkgname = fang\npkgver = 0.9.9-1\n'),
+    /missing Pacman metadata field: arch/
+  );
+});
+
+test('Pacman metadata parser rejects control bytes and malformed lines', () => {
+  for (const text of [
+    'pkgname = fang\npkgver = 0.9.9-1\narch = x86_64\x01\n',
+    'pkgname=fang\npkgver = 0.9.9-1\narch = x86_64\n',
+    'Pkgname = fang\npkgver = 0.9.9-1\narch = x86_64\n'
+  ]) {
+    assert.throws(() => parsePacmanPkgInfo(text), /malformed Pacman metadata line/);
+  }
+});
+
+test('stageRelease creates a deterministic eight-asset directory', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-release-contract-'));
+  const fixtureVersion = '0.9.9';
   const debDir = path.join(root, 'deb');
   const rpmDir = path.join(root, 'rpm');
+  const archDir = path.join(root, 'arch');
   const outputDir = path.join(root, 'out');
   fs.mkdirSync(debDir);
   fs.mkdirSync(rpmDir);
+  fs.mkdirSync(archDir);
   const installer = path.join(root, 'install.sh');
   fs.writeFileSync(installer, '#!/usr/bin/env bash\n');
 
-  for (const name of releaseNames('0.9.4').slice(2)) {
-    const dir = name.endsWith('.deb') ? debDir : rpmDir;
+  for (const name of releaseNames(fixtureVersion).slice(2)) {
+    const dir = name.endsWith('.deb') ? debDir : name.endsWith('.rpm') ? rpmDir : archDir;
     fs.writeFileSync(path.join(dir, name), name);
   }
 
   stageRelease({
-    version: '0.9.4',
+    version: fixtureVersion,
     debDir,
     rpmDir,
+    archDir,
     outputDir,
     installer,
     inspectDeb(file) {
       return path.basename(file).startsWith('Fang_')
-        ? { name: 'fang', version: '0.9.4', arch: 'amd64' }
-        : { name: 'fangd', version: '0.9.4-1', arch: 'amd64' };
+        ? { name: 'fang', version: fixtureVersion, arch: 'amd64' }
+        : { name: 'fangd', version: `${fixtureVersion}-1`, arch: 'amd64' };
     },
     inspectRpm(file) {
       return path.basename(file).startsWith('fang-')
-        ? { name: 'fang', epoch: '0', version: '0.9.4', release: '1', arch: 'x86_64' }
-        : { name: 'fangd', epoch: '(none)', version: '0.9.4', release: '1', arch: 'x86_64' };
+        ? { name: 'fang', epoch: '0', version: fixtureVersion, release: '1', arch: 'x86_64' }
+        : { name: 'fangd', epoch: '(none)', version: fixtureVersion, release: '1', arch: 'x86_64' };
+    },
+    inspectPacman(file) {
+      return path.basename(file).startsWith('fang-')
+        ? { name: 'fang', version: `${fixtureVersion}-1`, arch: 'x86_64' }
+        : { name: 'fangd', version: `${fixtureVersion}-1`, arch: 'x86_64' };
     }
   });
 
-  assert.deepEqual(fs.readdirSync(outputDir).sort(), releaseNames('0.9.4').sort());
+  assert.deepEqual(fs.readdirSync(outputDir).sort(), releaseNames(fixtureVersion).sort());
   const manifest = fs.readFileSync(path.join(outputDir, 'SHA256SUMS'), 'utf8');
-  validateManifest(manifest, checksumNames('0.9.4'));
+  validateManifest(manifest, checksumNames(fixtureVersion));
   assert.deepEqual(
     manifest.trimEnd().split('\n').map((line) => line.slice(66)),
-    checksumNames('0.9.4')
+    checksumNames(fixtureVersion)
   );
   fs.rmSync(root, { recursive: true });
 });
 
 test('stageRelease rejects package metadata mismatches before staging', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-release-contract-bad-'));
+  const fixtureVersion = '0.9.9';
   const debDir = path.join(root, 'deb');
   const rpmDir = path.join(root, 'rpm');
+  const archDir = path.join(root, 'arch');
   const outputDir = path.join(root, 'out');
   fs.mkdirSync(debDir);
   fs.mkdirSync(rpmDir);
+  fs.mkdirSync(archDir);
   const installer = path.join(root, 'install.sh');
   fs.writeFileSync(installer, '#!/usr/bin/env bash\n');
-  for (const name of releaseNames('0.9.4').slice(2)) {
-    fs.writeFileSync(path.join(name.endsWith('.deb') ? debDir : rpmDir, name), name);
+  for (const name of releaseNames(fixtureVersion).slice(2)) {
+    const dir = name.endsWith('.deb') ? debDir : name.endsWith('.rpm') ? rpmDir : archDir;
+    fs.writeFileSync(path.join(dir, name), name);
   }
 
-  assert.throws(
-    () =>
+  for (const inspectPacman of [
+    () => ({ name: 'wrong', version: `${fixtureVersion}-1`, arch: 'x86_64' }),
+    () => ({ name: 'fang', version: 'wrong', arch: 'x86_64' }),
+    () => ({ name: 'fang', version: `${fixtureVersion}-1`, arch: 'wrong' })
+  ]) {
+    assert.throws(
+      () =>
       stageRelease({
-        version: '0.9.4',
+        version: fixtureVersion,
         debDir,
         rpmDir,
+        archDir,
         outputDir,
         installer,
-        inspectDeb: () => ({ name: 'wrong', version: '0.9.4', arch: 'amd64' }),
-        inspectRpm: () => ({
-          name: 'fang',
-          epoch: '0',
-          version: '0.9.4',
-          release: '1',
-          arch: 'x86_64'
-        })
+        inspectDeb: (file) =>
+          path.basename(file).startsWith('Fang_')
+            ? { name: 'fang', version: fixtureVersion, arch: 'amd64' }
+            : { name: 'fangd', version: `${fixtureVersion}-1`, arch: 'amd64' },
+        inspectRpm: (file) =>
+          path.basename(file).startsWith('fang-')
+            ? { name: 'fang', epoch: '0', version: fixtureVersion, release: '1', arch: 'x86_64' }
+            : {
+                name: 'fangd',
+                epoch: '0',
+                version: fixtureVersion,
+                release: '1',
+                arch: 'x86_64'
+              },
+        inspectPacman
       }),
-    /metadata/
-  );
+      /metadata/
+    );
+  }
   assert.equal(fs.existsSync(outputDir), false);
+  fs.rmSync(root, { recursive: true });
+});
+
+test('stage CLI accepts the Arch directory before the output directory', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-release-cli-'));
+  const version = '0.9.9';
+  const debDir = path.join(root, 'deb');
+  const rpmDir = path.join(root, 'rpm');
+  const archDir = path.join(root, 'arch');
+  const outputDir = path.join(root, 'out');
+  const installer = path.join(root, 'install.sh');
+  fs.mkdirSync(debDir);
+  fs.mkdirSync(rpmDir);
+  fs.mkdirSync(archDir);
+  fs.writeFileSync(installer, '#!/usr/bin/env bash\n');
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(repositoryRoot, 'packaging/release/release-contract.mjs'),
+      'stage',
+      version,
+      debDir,
+      rpmDir,
+      archDir,
+      outputDir,
+      installer
+    ],
+    { encoding: 'utf8' }
+  );
+  assert.notEqual(result.status, 0);
+  assert.doesNotMatch(result.stderr, /usage:/);
+  assert.match(result.stderr, /DEB artifact directory mismatch/);
   fs.rmSync(root, { recursive: true });
 });
 

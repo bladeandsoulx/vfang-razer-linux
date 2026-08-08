@@ -13,7 +13,9 @@ export function releaseNames(version) {
     `Fang_${version}_amd64.deb`,
     `fangd_${version}-1_amd64.deb`,
     `fang-${version}-1.x86_64.rpm`,
-    `fangd-${version}-1.x86_64.rpm`
+    `fangd-${version}-1.x86_64.rpm`,
+    `fang-${version}-1-x86_64.pkg.tar.zst`,
+    `fangd-${version}-1-x86_64.pkg.tar.zst`
   ];
 }
 
@@ -71,6 +73,38 @@ export function inspectDeb(file, runCommand = commandValue) {
 
 const inspectDebDefault = inspectDeb;
 
+export function parsePacmanPkgInfo(text) {
+  const scalars = new Map();
+  for (const line of text.split('\n')) {
+    if (!line || line.startsWith('#')) continue;
+    const match = line.match(/^([a-z][a-z0-9_]*) = ([\x20-\x7e]*)$/);
+    if (!match) throw new Error(`malformed Pacman metadata line: ${line}`);
+    const [, key, value] = match;
+    if (['pkgname', 'pkgver', 'arch'].includes(key)) {
+      if (scalars.has(key)) throw new Error(`duplicate Pacman metadata field: ${key}`);
+      scalars.set(key, value);
+    }
+  }
+  for (const key of ['pkgname', 'pkgver', 'arch']) {
+    if (!scalars.has(key)) throw new Error(`missing Pacman metadata field: ${key}`);
+  }
+  return {
+    name: scalars.get('pkgname'),
+    version: scalars.get('pkgver'),
+    arch: scalars.get('arch')
+  };
+}
+
+export function inspectPacman(file, runCommand = commandValue) {
+  const members = runCommand('bsdtar', ['-tf', file]).split('\n');
+  if (members.filter((name) => name === '.PKGINFO').length !== 1) {
+    throw new Error(`${path.basename(file)} must contain exactly one .PKGINFO member`);
+  }
+  return parsePacmanPkgInfo(runCommand('bsdtar', ['-xOf', file, '.PKGINFO']));
+}
+
+const inspectPacmanDefault = inspectPacman;
+
 function inspectRpmDefault(file) {
   const [name, epoch, version, release, arch] = commandFields('rpm', [
     '-qp',
@@ -105,15 +139,18 @@ export function stageRelease({
   version,
   debDir,
   rpmDir,
+  archDir,
   outputDir,
   installer,
   inspectDeb = inspectDebDefault,
-  inspectRpm = inspectRpmDefault
+  inspectRpm = inspectRpmDefault,
+  inspectPacman = inspectPacmanDefault
 }) {
   const names = releaseNames(version);
   const packageNames = names.slice(2);
   const expectedDebs = packageNames.filter((name) => name.endsWith('.deb'));
   const expectedRpms = packageNames.filter((name) => name.endsWith('.rpm'));
+  const expectedPacman = packageNames.filter((name) => name.endsWith('.pkg.tar.zst'));
   assertExactNames(
     fs.readdirSync(debDir).filter((name) => name.endsWith('.deb')),
     expectedDebs,
@@ -124,11 +161,18 @@ export function stageRelease({
     expectedRpms,
     'RPM artifact directory'
   );
+  assertExactNames(
+    fs.readdirSync(archDir).filter((name) => name.endsWith('.pkg.tar.zst')),
+    expectedPacman,
+    'Pacman artifact directory'
+  );
 
   const fangDeb = path.join(debDir, expectedDebs[0]);
   const fangdDeb = path.join(debDir, expectedDebs[1]);
   const fangRpm = path.join(rpmDir, expectedRpms[0]);
   const fangdRpm = path.join(rpmDir, expectedRpms[1]);
+  const fangPacman = path.join(archDir, expectedPacman[0]);
+  const fangdPacman = path.join(archDir, expectedPacman[1]);
   assertMetadata(inspectDeb(fangDeb), { name: 'fang', version, arch: 'amd64' }, fangDeb);
   assertMetadata(
     inspectDeb(fangdDeb),
@@ -145,6 +189,16 @@ export function stageRelease({
     { name: 'fangd', epoch: '0', version, release: '1', arch: 'x86_64' },
     fangdRpm
   );
+  assertMetadata(
+    inspectPacman(fangPacman),
+    { name: 'fang', version: `${version}-1`, arch: 'x86_64' },
+    fangPacman
+  );
+  assertMetadata(
+    inspectPacman(fangdPacman),
+    { name: 'fangd', version: `${version}-1`, arch: 'x86_64' },
+    fangdPacman
+  );
   if (!fs.statSync(installer).isFile()) throw new Error('installer is not a regular file');
 
   if (fs.existsSync(outputDir)) {
@@ -156,7 +210,9 @@ export function stageRelease({
     [path.basename(fangDeb), fangDeb],
     [path.basename(fangdDeb), fangdDeb],
     [path.basename(fangRpm), fangRpm],
-    [path.basename(fangdRpm), fangdRpm]
+    [path.basename(fangdRpm), fangdRpm],
+    [path.basename(fangPacman), fangPacman],
+    [path.basename(fangdPacman), fangdPacman]
   ]);
   for (const name of checksumNames(version)) {
     fs.copyFileSync(sources.get(name), path.join(outputDir, name));
@@ -170,13 +226,13 @@ export function stageRelease({
 }
 
 function main(args) {
-  if (args.length !== 6 || args[0] !== 'stage') {
+  if (args.length !== 7 || args[0] !== 'stage') {
     throw new Error(
-      'usage: release-contract.mjs stage VERSION DEB_DIR RPM_DIR OUTPUT_DIR INSTALLER'
+      'usage: release-contract.mjs stage VERSION DEB_DIR RPM_DIR ARCH_DIR OUTPUT_DIR INSTALLER'
     );
   }
-  const [, version, debDir, rpmDir, outputDir, installer] = args;
-  stageRelease({ version, debDir, rpmDir, outputDir, installer });
+  const [, version, debDir, rpmDir, archDir, outputDir, installer] = args;
+  stageRelease({ version, debDir, rpmDir, archDir, outputDir, installer });
   console.log(`Staged immutable VFang v${version} release in ${outputDir}`);
 }
 

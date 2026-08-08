@@ -91,6 +91,8 @@ main() {
     "fangd_${VERSION}-1_amd64.deb"
     "fang-${VERSION}-1.x86_64.rpm"
     "fangd-${VERSION}-1.x86_64.rpm"
+    "fang-${VERSION}-1-x86_64.pkg.tar.zst"
+    "fangd-${VERSION}-1-x86_64.pkg.tar.zst"
   )
   local name
   local local_count
@@ -99,7 +101,7 @@ main() {
     [[ -f "$RELEASE_DIR/$name" ]] || fatal "missing local release asset: $name"
   done
   local_count=$(find "$RELEASE_DIR" -mindepth 1 -maxdepth 1 -type f -printf . | wc -c)
-  [[ $local_count == 6 ]] || fatal "local release inventory contains $local_count files, expected 6"
+  [[ $local_count == 8 ]] || fatal "local release inventory contains $local_count files, expected 8"
 
   local immutable_enabled
   immutable_enabled=$(
@@ -156,6 +158,8 @@ main() {
   upload_asset "$release_id" "fangd_${VERSION}-1_amd64.deb"
   upload_asset "$release_id" "fang-${VERSION}-1.x86_64.rpm"
   upload_asset "$release_id" "fangd-${VERSION}-1.x86_64.rpm"
+  upload_asset "$release_id" "fang-${VERSION}-1-x86_64.pkg.tar.zst"
+  upload_asset "$release_id" "fangd-${VERSION}-1-x86_64.pkg.tar.zst"
 
   GH_TOKEN=$GITHUB_TOKEN gh api \
     --method GET \
@@ -186,7 +190,7 @@ main() {
     -H 'X-GitHub-Api-Version: 2026-03-10' \
     "$API/releases/latest" > "$PUBLICATION_TEMPORARY/latest.json"
   validate_release_json "$PUBLICATION_TEMPORARY/latest.json" published
-  printf 'Published immutable VFang %s release with six verified assets.\n' "$TAG"
+  printf 'Published immutable VFang %s release with eight verified assets.\n' "$TAG"
 }
 
 main "$@"
