@@ -39,6 +39,9 @@ mod linux {
         let Some(event_box) = titlebar.downcast_ref::<gtk::EventBox>() else {
             return false;
         };
+        if !event_box.is_above_child() {
+            return false;
+        }
         event_box.set_above_child(false);
         true
     }
@@ -59,6 +62,7 @@ mod tests {
 
         assert!(lower_titlebar_event_box(&event_box_widget));
         assert!(!event_box.is_above_child());
+        assert!(!lower_titlebar_event_box(&event_box_widget));
 
         let label = gtk::Label::new(Some("ordinary title"));
         let label_widget = label.upcast::<gtk::Widget>();
