@@ -577,7 +577,7 @@ test('Fedora derivatives require an exact VERSION_ID:CPE_NAME pair before downlo
 const realOsReleaseDir = path.join(root, 'packaging/installer/os-release');
 const realPlatforms = new Map([
   ['arch-container', ['Arch Linux', 'PACMAN']],
-  ['cachyos-container', ['Arch Linux', 'PACMAN']],
+  ['cachyos-container', ['CachyOS', 'PACMAN']],
   ['debian-12', ['Debian 12', 'DEB']],
   ['debian-13', ['Debian 13', 'DEB']],
   ['fedora-43', ['Fedora 43', 'RPM']],

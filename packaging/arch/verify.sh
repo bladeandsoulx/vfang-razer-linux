@@ -8,7 +8,7 @@ TMP="$(mktemp -d)"
 chmod 0755 "$TMP"
 trap 'rm -rf -- "$TMP"' EXIT
 
-VERSION="$(node -p "require('$ROOT/app/package.json').version")"
+VERSION="$({ sed -n 's/^pkgver=//p' "$ROOT/packaging/arch/PKGBUILD"; } | head -n1)"
 UPPER="$({ sed -n 's/^_fangd_upper=//p' "$ROOT/packaging/arch/PKGBUILD"; } | head -n1)"
 mapfile -t packages < <(find "$PACKAGE_DIR" -maxdepth 1 -type f -name '*.pkg.tar.zst' -print | sort)
 [[ ${#packages[@]} == 2 ]] || {

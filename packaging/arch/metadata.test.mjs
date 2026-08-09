@@ -60,3 +60,9 @@ test('lifecycle verifier lets the non-root builder traverse its dummy package di
   const verify = read('packaging/arch/verify.sh');
   assert.match(verify, /TMP="\$\(mktemp -d\)"\nchmod 0755 "\$TMP"/);
 });
+
+test('lifecycle verifier does not require the build-only Node runtime', () => {
+  const verify = read('packaging/arch/verify.sh');
+  assert.doesNotMatch(verify, /\bnode\b/);
+  assert.match(verify, /packaging\/arch\/PKGBUILD/);
+});

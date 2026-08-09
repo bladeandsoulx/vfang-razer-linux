@@ -34,6 +34,13 @@ os_release_file=${FANG_OS_RELEASE_FILE:-/etc/os-release}
 }
 
 fields='^(ID|ID_LIKE|VERSION_ID|VERSION_CODENAME|UBUNTU_CODENAME|PLATFORM_ID|CPE_NAME)='
+case $name in
+    arch-container|cachyos-container)
+        # Arch-family VERSION_ID values identify rolling image snapshots, not
+        # supported platform versions. Keep the stable identity fields gated.
+        fields='^(ID|ID_LIKE|VERSION_CODENAME|UBUNTU_CODENAME|PLATFORM_ID|CPE_NAME)='
+        ;;
+esac
 
 if ! grep -E "$fields" "$os_release_file" | diff -u "$capture" -; then
     echo >&2

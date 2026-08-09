@@ -243,17 +243,25 @@ jobs:
             image: archlinux:base-devel
             capture: arch-container
             platform: Arch Linux
+            disable_sandbox_network: false
           - name: CachyOS
             image: cachyos/cachyos:latest
             capture: cachyos-container
-            platform: Arch Linux
+            platform: CachyOS
+            disable_sandbox_network: true
     container:
       image: ${{ matrix.image }}
     steps:
-      - run: >
-          pacman -Syu --noconfirm
-          git systemd python dbus xorg-server-xvfb xorg-xauth
-          desktop-file-utils procps-ng diffutils namcap libarchive util-linux
+      - name: Install Pacman verification tools
+        env:
+          DISABLE_PACMAN_SANDBOX_NETWORK: ${{ matrix.disable_sandbox_network }}
+        run: |
+          if [[ "$DISABLE_PACMAN_SANDBOX_NETWORK" == true ]]; then
+            sed -i '/^\[options\]/a DisableSandboxNetwork' /etc/pacman.conf
+          fi
+          pacman -Syu --noconfirm \
+            git systemd python dbus xorg-server-xvfb xorg-xauth \
+            desktop-file-utils procps-ng diffutils namcap libarchive util-linux
       - uses: actions/checkout@v4
       - name: os-release projection still matches this image
         run: >

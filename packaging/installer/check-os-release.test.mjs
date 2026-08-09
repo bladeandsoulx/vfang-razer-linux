@@ -14,13 +14,15 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
-function makeProbeFixture() {
+function makeProbeFixture({
+  name = 'fixture-os',
+  identity = 'ID=debian\nVERSION_ID="12"\nVERSION_CODENAME=bookworm\n',
+  capture = identity
+} = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-os-release-probe-test-'));
   const installerDir = path.join(dir, 'packaging/installer');
   const captureDir = path.join(installerDir, 'os-release');
   const identityFile = path.join(dir, 'os-release');
-  const name = 'fixture-os';
-  const identity = 'ID=debian\nVERSION_ID="12"\nVERSION_CODENAME=bookworm\n';
 
   fs.mkdirSync(captureDir, { recursive: true, mode: 0o755 });
   for (const directory of [
@@ -32,7 +34,7 @@ function makeProbeFixture() {
     fs.chmodSync(directory, 0o755);
   }
   fs.writeFileSync(identityFile, identity, { mode: 0o644 });
-  fs.writeFileSync(path.join(captureDir, name), identity, { mode: 0o644 });
+  fs.writeFileSync(path.join(captureDir, name), capture, { mode: 0o644 });
   fs.copyFileSync(helper, path.join(installerDir, 'check-os-release.sh'));
   fs.chmodSync(path.join(installerDir, 'check-os-release.sh'), 0o755);
   fs.writeFileSync(
@@ -91,7 +93,7 @@ test('real-file probe rejects an incorrect expected platform label', () => {
 
 for (const [name, expectedPlatform] of [
   ['arch-container', 'Arch Linux'],
-  ['cachyos-container', 'Arch Linux'],
+  ['cachyos-container', 'CachyOS'],
   ['debian-12', 'Debian 12']
 ]) {
   test(`real-file probe accepts ${name} stopping at the curl sentinel`, () => {
@@ -116,6 +118,14 @@ test('push and tag workflows gate Pacman packages on Arch and CachyOS', () => {
     assert.match(source, /name: fang-arch-packages/);
     assert.match(source, /arch-container/);
     assert.match(source, /cachyos-container/);
+    assert.match(source, /capture: cachyos-container\n\s+platform: CachyOS/);
+    assert.match(source, /name: Arch Linux[\s\S]*?disable_sandbox_network: false/);
+    assert.match(source, /name: CachyOS[\s\S]*?disable_sandbox_network: true/);
+    assert.match(source, /DISABLE_PACMAN_SANDBOX_NETWORK:.*disable_sandbox_network/);
+    assert.match(source, /if \[\[ "\$DISABLE_PACMAN_SANDBOX_NETWORK" == true \]\]/);
+    assert.ok(source.includes(
+      "sed -i '/^\\[options\\]/a DisableSandboxNetwork' /etc/pacman.conf"
+    ));
   }
 });
 
@@ -124,6 +134,28 @@ test('real-file probe accepts only the curl stop sentinel', () => {
   const result = fixture.run('curl');
   assert.equal(result.status, 0, result.stdout + result.stderr);
   assert.match(result.stdout, new RegExp(stoppedMarker));
+  fixture.cleanup();
+});
+
+test('rolling Arch projections ignore volatile VERSION_ID values', () => {
+  const fixture = makeProbeFixture({
+    name: 'arch-container',
+    identity: 'ID=arch\nVERSION_ID=20260802.0.566770\n',
+    capture: 'ID=arch\n'
+  });
+  const result = fixture.run('curl');
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  fixture.cleanup();
+});
+
+test('non-rolling projections still reject VERSION_ID drift', () => {
+  const fixture = makeProbeFixture({
+    identity: 'ID=debian\nVERSION_ID="13"\nVERSION_CODENAME=bookworm\n',
+    capture: 'ID=debian\nVERSION_ID="12"\nVERSION_CODENAME=bookworm\n'
+  });
+  const result = fixture.run('curl');
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stderr, /no longer matches/);
   fixture.cleanup();
 });
 
