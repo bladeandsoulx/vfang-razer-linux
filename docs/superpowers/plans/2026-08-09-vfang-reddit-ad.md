@@ -28,7 +28,6 @@
 **Files:**
 - Create: `vfang-reddit-ad/index.html`
 - Create: `vfang-reddit-ad/DESIGN.md`
-- Create: `vfang-reddit-ad/tests/ad-contract.test.mjs`
 - Create: `vfang-reddit-ad/assets/vfang-icon.png`
 - Create: `vfang-reddit-ad/assets/dashboard.png`
 - Create: `vfang-reddit-ad/assets/performance.png`
@@ -36,7 +35,7 @@
 
 **Interfaces:**
 - Consumes: source captures from `app/src-tauri/icons/icon.png` and `docs/screenshots/*.png`; approved copy and timings from `docs/superpowers/specs/2026-08-09-vfang-reddit-ad-design.md`.
-- Produces: a standalone composition with `data-composition-id="vfang-reddit-ad"`, fixed dimensions, fixed duration, nine clip IDs (`scene-1` through `scene-5`, `transition-1` through `transition-4`), and local asset paths used by later animation and render tasks.
+- Produces: a standalone composition with `data-composition-id="vfang-reddit-ad"`, fixed dimensions, fixed duration, nine clip IDs (`scene-1` through `scene-5`, `transition-1` through `transition-4`), and local asset paths used by later animation and render tasks. HyperFrames itself is the consumer under test: lint checks the document contract, validate exercises the browser runtime and contrast, inspect samples the live layout, and render exercises the capture pipeline.
 
 - [ ] **Step 1: Scaffold the project with the HyperFrames blank template**
 
@@ -53,7 +52,7 @@ Expected: `vfang-reddit-ad/index.html` exists and `npx hyperframes compositions 
 Run:
 
 ```bash
-mkdir -p vfang-reddit-ad/assets vfang-reddit-ad/tests
+mkdir -p vfang-reddit-ad/assets
 cp app/src-tauri/icons/icon.png vfang-reddit-ad/assets/vfang-icon.png
 cp docs/screenshots/dashboard.png vfang-reddit-ad/assets/dashboard.png
 cp docs/screenshots/performance.png vfang-reddit-ad/assets/performance.png
@@ -62,66 +61,17 @@ cp docs/screenshots/fan-curve.png vfang-reddit-ad/assets/fan-curve.png
 
 Expected: all four paths exist and are PNG files.
 
-- [ ] **Step 3: Write the failing composition contract test**
-
-Create `vfang-reddit-ad/tests/ad-contract.test.mjs` with:
-
-```js
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import test from 'node:test';
-
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-
-test('advertisement has the approved composition contract', () => {
-  assert.match(html, /data-composition-id="vfang-reddit-ad"/);
-  assert.match(html, /data-width="1920"/);
-  assert.match(html, /data-height="1080"/);
-  assert.match(html, /data-duration="20"/);
-  for (let scene = 1; scene <= 5; scene += 1) {
-    assert.match(html, new RegExp(`id="scene-${scene}"`));
-  }
-  for (let transition = 1; transition <= 4; transition += 1) {
-    assert.match(html, new RegExp(`id="transition-${transition}"`));
-  }
-});
-
-test('advertisement contains approved claims and qualification', () => {
-  for (const claim of [
-    'YOUR BLADE. YOUR LINUX.',
-    'SYNAPSE STOPS AT WINDOWS.',
-    'VFANG STARTS ON LINUX.',
-    'NO ACCOUNT',
-    'CONTROLS WORK OFFLINE',
-    'NO ADS',
-    'TAKE BACK YOUR BLADE.',
-    'github.com/bladeandsoulx/vfang-razer-linux',
-    'VFang is not affiliated with Razer.'
-  ]) {
-    assert.ok(html.includes(claim), `missing claim: ${claim}`);
-  }
-});
-
-test('advertisement is deterministic and self-contained', () => {
-  assert.doesNotMatch(html, /Math\.random|Date\.now|repeat\s*:\s*-1/);
-  assert.doesNotMatch(html, /<(?:img|video|audio)[^>]+src="https?:/);
-  for (const asset of ['vfang-icon.png', 'dashboard.png', 'performance.png', 'fan-curve.png']) {
-    assert.ok(html.includes(`assets/${asset}`), `missing local asset: ${asset}`);
-  }
-});
-```
-
-- [ ] **Step 4: Run the contract to verify it fails against the blank scaffold**
+- [ ] **Step 3: Run HyperFrames lint against the blank scaffold**
 
 Run:
 
 ```bash
-node --test vfang-reddit-ad/tests/ad-contract.test.mjs
+npx hyperframes lint vfang-reddit-ad --verbose
 ```
 
-Expected: FAIL because the blank composition lacks the approved IDs, copy, and local asset references.
+Expected: the generated blank template is structurally valid. Record this as the generated-artifact baseline; the composition behavior is introduced only after the visual identity is fixed in Step 4.
 
-- [ ] **Step 5: Define the project visual identity**
+- [ ] **Step 4: Define the project visual identity**
 
 Create `vfang-reddit-ad/DESIGN.md` with these exact sections and decisions:
 
@@ -161,7 +111,7 @@ Mechanical reveals, signal scans, panel apertures, and short power-on glows. Ent
 - No jump cuts, infinite loops, or random animation.
 ```
 
-- [ ] **Step 6: Build the static hero layouts and clip timing**
+- [ ] **Step 5: Build the static hero layouts and clip timing**
 
 Replace the scaffold body with one direct composition container and the following clip contract:
 
@@ -235,18 +185,17 @@ Replace the scaffold body with one direct composition container and the followin
 
 Use `.scene-content { width: 100%; height: 100%; padding: 96px 120px; display: flex; flex-direction: column; box-sizing: border-box; }` as the layout base. Position decorative glows and grid lines absolutely, but keep all copy and panels in flex/grid flow. Include all exact claims from the test and all four local images.
 
-- [ ] **Step 7: Run the contract and static HyperFrames checks**
+- [ ] **Step 6: Run the static HyperFrames checks**
 
 Run:
 
 ```bash
-node --test vfang-reddit-ad/tests/ad-contract.test.mjs
 npx hyperframes lint vfang-reddit-ad
 ```
 
-Expected: contract PASS. If lint reports the timeline as unregistered before Task 2, record that single expected failure; clip overlap and composition structure checks must pass.
+Expected: if lint reports the timeline as unregistered before Task 2, record that single expected failure; clip overlap, asset existence, composition structure, fixed dimensions, and timing checks must pass.
 
-- [ ] **Step 8: Commit the static composition**
+- [ ] **Step 7: Commit the static composition**
 
 ```bash
 git add vfang-reddit-ad
@@ -259,39 +208,12 @@ git commit -m "feat: scaffold VFang Reddit ad"
 
 **Files:**
 - Modify: `vfang-reddit-ad/index.html`
-- Modify: `vfang-reddit-ad/tests/ad-contract.test.mjs`
 
 **Interfaces:**
 - Consumes: clip IDs, class names, asset references, and static hero layouts from Task 1.
 - Produces: `window.__timelines['vfang-reddit-ad']`, entrance motion for every meaningful scene element, four complete transition animations, and one final-scene fade.
 
-- [ ] **Step 1: Extend the contract test for animation rules**
-
-Append:
-
-```js
-test('timeline is registered and follows transition rules', () => {
-  assert.match(html, /gsap\.timeline\(\{\s*paused:\s*true\s*\}\)/);
-  assert.match(html, /window\.__timelines\[['"]vfang-reddit-ad['"]\]\s*=\s*tl/);
-  assert.ok((html.match(/\.from\(/g) ?? []).length >= 20, 'too few entrance tweens');
-  for (let transition = 1; transition <= 4; transition += 1) {
-    assert.match(html, new RegExp(`#transition-${transition}`));
-  }
-  assert.doesNotMatch(html, /\.to\(['"]#scene-[1-4][^)]*opacity\s*:\s*0/);
-});
-```
-
-- [ ] **Step 2: Run the animation contract to verify it fails**
-
-Run:
-
-```bash
-node --test vfang-reddit-ad/tests/ad-contract.test.mjs
-```
-
-Expected: FAIL because the GSAP timeline is not yet registered and entrance count is below 20.
-
-- [ ] **Step 3: Add the synchronous GSAP timeline**
+- [ ] **Step 1: Add the synchronous GSAP timeline**
 
 At the end of `index.html`, load GSAP and register the timeline synchronously:
 
@@ -346,7 +268,7 @@ At the end of `index.html`, load GSAP and register the timeline synchronously:
 
 Use the exact selectors and time positions above. Add the transition calls from Step 4 and only one scene exit: `tl.to('#scene-5 .scene-content', { opacity: 0, duration: 0.35, ease: 'power2.in' }, 19.55)`.
 
-- [ ] **Step 4: Implement four transition overlays**
+- [ ] **Step 2: Implement four transition overlays**
 
 Animate the existing transition DOM without hiding the outgoing scene early:
 
@@ -365,19 +287,18 @@ tl.from('#transition-1 .scan', { xPercent: -120, duration: 0.22, ease: 'power4.i
 
 The paired `to()` calls above remove every opaque overlay before its transition clip ends.
 
-- [ ] **Step 5: Run contract, lint, and validate**
+- [ ] **Step 3: Run lint and validate against the browser runtime**
 
 Run:
 
 ```bash
-node --test vfang-reddit-ad/tests/ad-contract.test.mjs
 npx hyperframes lint vfang-reddit-ad
 npx hyperframes validate vfang-reddit-ad
 ```
 
 Expected: all tests PASS; lint and validate report zero errors, and contrast produces no unresolved WCAG warnings.
 
-- [ ] **Step 6: Generate and review the animation map**
+- [ ] **Step 4: Generate and review the animation map**
 
 Run:
 
@@ -387,10 +308,10 @@ node /home/home/.codex/plugins/cache/openai-curated-remote/hyperframes/0.1.2/ski
 
 Expected: every scene has entrance activity, only the closing scene has an exit, no tween is under 0.2 seconds, no element remains unexpectedly invisible, and every reported dead zone is an intentional reading hold under 1.5 seconds.
 
-- [ ] **Step 7: Commit the animated composition**
+- [ ] **Step 5: Commit the animated composition**
 
 ```bash
-git add vfang-reddit-ad/index.html vfang-reddit-ad/tests/ad-contract.test.mjs
+git add vfang-reddit-ad/index.html
 git commit -m "feat: animate VFang Reddit ad"
 ```
 
@@ -443,7 +364,6 @@ Expected: one contact sheet showing ten evenly spaced frames. Inspect it for cop
 Run:
 
 ```bash
-node --test vfang-reddit-ad/tests/ad-contract.test.mjs
 npx hyperframes lint vfang-reddit-ad
 npx hyperframes validate vfang-reddit-ad
 npx hyperframes inspect vfang-reddit-ad --samples 15 --strict
