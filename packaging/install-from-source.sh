@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and install Fang from source on Debian/Ubuntu.
+# Build and install VFang from source on Debian/Ubuntu.
 # Usage: sudo ./packaging/install-from-source.sh   (run from the repo root)
 set -euo pipefail
 
@@ -125,7 +125,7 @@ source_installer_require_debian_family() {
 
     echo "this script builds from source on Debian and Ubuntu only" >&2
     echo "detected: $DISTRO_ID" >&2
-    echo "on Fedora, install the released RPMs instead - see README.md" >&2
+    echo "on Fedora or Arch-family systems, install the released native packages instead - see README.md" >&2
     return 1
 }
 
@@ -134,8 +134,8 @@ if [[ ${BASH_SOURCE[0]} != "$0" ]]; then
 fi
 
 # Everything below assumes apt-get and Debian's -dev package names. Check the
-# family before asking for root, so a Fedora user gets a useful message instead
-# of a bare "apt-get: command not found" after already elevating.
+# family before asking for root, so Fedora and Arch-family users get useful
+# guidance instead of a bare "apt-get: command not found" after already elevating.
 # Read os-release rather than sourcing it, matching install.sh's posture.
 source_installer_require_debian_family /etc/os-release || exit 1
 

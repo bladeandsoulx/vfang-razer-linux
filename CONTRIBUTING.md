@@ -38,10 +38,11 @@ read-only **Administration** repository permission. The ordinary workflow
 token retains only `contents: write` for draft creation and publication.
 
 The tag workflow refuses an existing release, stages exactly `install.sh`,
-`SHA256SUMS`, two DEBs, and two RPMs, validates remote sizes and SHA-256
-digests, then publishes once and confirms the result is immutable and latest.
-If validation fails after draft creation, inspect and manually remove that
-unpublished draft before retrying; automation never overwrites it.
+`SHA256SUMS`, two DEBs, two RPMs, and two Pacman packages—exactly eight assets
+total—validates remote sizes and SHA-256 digests, then publishes once and
+confirms the result is immutable and latest. If validation fails after draft
+creation, inspect and manually remove that unpublished draft before retrying;
+automation never overwrites it.
 
 ## Adding support for your Blade
 

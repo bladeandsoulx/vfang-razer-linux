@@ -1,4 +1,4 @@
-# First run on real hardware (Razer Blade, Ubuntu or Fedora)
+# First run on real hardware (Razer Blade, Ubuntu, Fedora, Arch, or CachyOS)
 
 VFang's EC packet layer is byte-verified against razer-laptop-control, but
 this checklist is for the first boot on a physical Blade. Work through it in
@@ -49,6 +49,10 @@ Then inspect the daemon:
 
 ```sh
 journalctl -u fangd -b --no-pager | tail -20
+
+# Arch-family package identity and integrity
+pacman -Q fang fangd
+pacman -Qkk fang fangd
 ```
 
 Expect: `found Razer Blade 18 (2023)` (or your model) and
@@ -155,18 +159,20 @@ Disable to resume normal charging to 100%.
 
 ```sh
 sudo systemctl disable --now fangd     # stop controlling the EC
-sudo dnf remove fang fangd       # Fedora RPM installs
+sudo dnf remove fang fangd             # Fedora RPM installs
+sudo pacman -Rns fang fangd             # Arch/CachyOS Pacman installs
 ```
 
 Stopping now restores EC automatic fan control; reboot still returns all EC
 settings to firmware defaults. To remove everything:
-`sudo apt remove fang fangd` (deb installs) or delete `/usr/bin/fangd`,
-`/lib/systemd/system/fangd.service`, `/var/lib/fangd`.
+`sudo apt remove fang fangd` (DEB installs), `sudo dnf remove fang fangd` (RPM
+installs), or `sudo pacman -Rns fang fangd` (Pacman installs).
 
 ## Reporting results
 
 Open an issue with: model + year, distribution + version, desktop + Wayland/X11
 session, `lsusb -d 1532:` output, `journalctl -u fangd -b` snippet, and which
-steps passed or failed. On Fedora, also include `getenforce` and any VFang-related
-`ausearch -m AVC -ts recent` denials. This is enough to distinguish packaging,
+steps passed or failed. On Fedora, also include `getenforce` and any
+VFang-related `ausearch -m AVC -ts recent` denials. On Arch-family systems,
+include `pacman -Q fang fangd` output. This is enough to distinguish packaging,
 SELinux, desktop-session, and hardware-profile failures.

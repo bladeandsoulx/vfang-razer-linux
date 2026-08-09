@@ -75,11 +75,14 @@ Tested x86_64 Linux bases:
 - Ubuntu 22.04, 24.04, and 26.04
 - Debian 12 and 13
 - Fedora 43 and 44
+- Arch Linux and CachyOS
 
 Linux Mint, Zorin OS, Pop!_OS, and other derivatives are accepted when they
-report one of those supported Ubuntu, Debian, or Fedora bases. The installer
-warns that derivatives are not tested directly. Other CPU architectures and
-unsupported base releases are rejected before anything is installed.
+report one of the supported Ubuntu, Debian, or Fedora bases. Other Arch
+derivatives are accepted when `/etc/os-release` contains the exact
+`ID_LIKE=arch` family token. The installer warns that compatible derivatives
+are not tested directly. Other CPU architectures and unsupported base releases
+are rejected before anything is installed.
 
 Unknown Razer product IDs are monitor-only by default. Check the
 [full model list](crates/fang-protocol/src/models.rs) or follow
@@ -114,10 +117,10 @@ bash install.sh
 This lets you read the script before it asks for administrator access.
 
 For an extra integrity check, download the installer and checksum manifest from
-the pinned v0.9.8 release:
+the pinned v0.9.9 release:
 
 ```bash
-curl -fLO 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/download/v0.9.8/{install.sh,SHA256SUMS}'
+curl -fLO 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/download/v0.9.9/{install.sh,SHA256SUMS}'
 grep '  install.sh$' SHA256SUMS > install.sh.sha256
 sha256sum --check install.sh.sha256
 ```
@@ -131,10 +134,19 @@ Download both packages from the same release, then install them together:
 
 ```bash
 # Ubuntu or Debian
-sudo apt install ./fangd_0.9.8-1_amd64.deb ./Fang_0.9.8_amd64.deb
+sudo apt install ./fangd_0.9.9-1_amd64.deb ./Fang_0.9.9_amd64.deb
 
 # Fedora 43 or 44
-sudo dnf install ./fangd-0.9.8-1.x86_64.rpm ./fang-0.9.8-1.x86_64.rpm
+sudo dnf install ./fangd-0.9.9-1.x86_64.rpm ./fang-0.9.9-1.x86_64.rpm
+```
+
+On Arch Linux, CachyOS, or a compatible Arch derivative, first fully update
+with `sudo pacman -Syu`. Reboot before installing VFang if that update requests
+it, then install the release pair:
+
+```bash
+sudo pacman -U ./fangd-0.9.9-1-x86_64.pkg.tar.zst \
+  ./fang-0.9.9-1-x86_64.pkg.tar.zst
 ```
 
 Enable the background service and give your user access:
@@ -144,8 +156,9 @@ sudo systemctl enable --now fangd
 sudo usermod -aG fang "$USER"
 ```
 
-Log out and back in once after adding the group. To remove VFang, run
-`sudo apt remove fang fangd` or `sudo dnf remove fang fangd`.
+Log out and back in once after adding the group. To remove VFang, use the
+matching package-family command: `sudo apt remove fang fangd`,
+`sudo dnf remove fang fangd`, or `sudo pacman -Rns fang fangd`.
 
 </details>
 

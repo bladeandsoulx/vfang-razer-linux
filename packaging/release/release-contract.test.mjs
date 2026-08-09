@@ -374,24 +374,38 @@ test('documentation exposes release, review, integrity, manual, and source insta
   );
   assert.match(readme, /curl -fLO .*releases\/latest\/download\/install\.sh/);
   assert.match(readme, /less install\.sh\nbash install\.sh/);
-  assert.match(readme, /releases\/download\/v0\.9\.8\/\{install\.sh,SHA256SUMS\}/);
+  assert.match(readme, /releases\/download\/v0\.9\.9\/\{install\.sh,SHA256SUMS\}/);
   assert.match(
     readme,
-    /sudo apt install \.\/fangd_0\.9\.8-1_amd64\.deb \.\/Fang_0\.9\.8_amd64\.deb/
+    /sudo apt install \.\/fangd_0\.9\.9-1_amd64\.deb \.\/Fang_0\.9\.9_amd64\.deb/
   );
   assert.match(
     readme,
-    /sudo dnf install \.\/fangd-0\.9\.8-1\.x86_64\.rpm \.\/fang-0\.9\.8-1\.x86_64\.rpm/
+    /sudo dnf install \.\/fangd-0\.9\.9-1\.x86_64\.rpm \.\/fang-0\.9\.9-1\.x86_64\.rpm/
   );
   assert.match(readme, /sha256sum --check .*install\.sh/);
   assert.match(readme, /^- Ubuntu 22\.04, 24\.04, and 26\.04$/m);
   assert.match(readme, /^- Debian 12 and 13$/m);
   assert.match(readme, /^- Fedora 43 and 44$/m);
+  assert.match(readme, /^- Arch Linux and CachyOS$/m);
+  assert.match(readme, /ID_LIKE=arch/);
+  assert.match(readme, /sudo pacman -Syu/);
+  assert.match(
+    readme,
+    /sudo pacman -U \.\/fangd-0\.9\.9-1-x86_64\.pkg\.tar\.zst/
+  );
+  assert.match(readme, /\.\/fang-0\.9\.9-1-x86_64\.pkg\.tar\.zst/);
+  assert.match(readme, /sudo pacman -Rns fang fangd/);
   assert.match(readme, /do not add `sudo`/);
   assert.match(readme, /refuses downgrades/i);
   assert.match(readme, /Install release packages manually/);
   assert.match(readme, /packaging\/install-from-source\.sh/);
   assert.match(contributing, /IMMUTABLE_RELEASES_TOKEN/);
+  assert.match(contributing, /two Pacman packages/);
+  assert.match(contributing, /exactly eight/);
+  assert.match(hardware, /Arch|CachyOS/);
+  assert.match(hardware, /pacman -Rns fang fangd/);
+  assert.match(read('packaging/install-from-source.sh'), /Arch-family systems/);
   for (const [name, content] of [
     ['README.md', readme],
     ['CONTRIBUTING.md', contributing],
@@ -400,7 +414,7 @@ test('documentation exposes release, review, integrity, manual, and source insta
     assert.match(content, /\bVFang\b/, name);
     assert.doesNotMatch(content, /\bFang\b/, name);
   }
-  assert.match(readme, /Fang_0\.9\.8_amd64\.deb/);
+  assert.match(readme, /Fang_0\.9\.9_amd64\.deb/);
   assert.match(readme, /bladeandsoulx\/vfang-razer-linux/);
   assert.match(contributing, /read-only.*Administration|Administration.*read-only/is);
   assert.match(hardware, /packaging\/install-from-source\.sh/);
