@@ -177,6 +177,11 @@ test('release workflow has per-tag concurrency and exact publication gates', () 
   assert.match(source, /cancel-in-progress: false/);
   assert.match(source, /IMMUTABLE_RELEASES_TOKEN: \$\{\{ secrets\.IMMUTABLE_RELEASES_TOKEN \}\}/);
   assert.match(source, /release-contract\.mjs stage/);
+  assert.match(
+    source,
+    /release-contract\.mjs stage \\\s*\n\s*"\$version" dist\/deb dist\/rpm dist\/arch dist\/release install\.sh/
+  );
+  assert.match(source, /needs: \[[^\n]*arch-test[^\n]*\]/);
   assert.match(source, /packaging\/release\/publish\.sh/);
   assert.doesNotMatch(source, /softprops\/action-gh-release|create four-package draft/);
 });

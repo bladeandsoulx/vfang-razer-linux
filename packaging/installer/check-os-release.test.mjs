@@ -10,6 +10,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const helper = path.join(root, 'packaging/installer/check-os-release.sh');
 const stoppedMarker = 'installer detection probe stopped before download';
 
+function read(relativePath) {
+  return fs.readFileSync(path.join(root, relativePath), 'utf8');
+}
+
 function makeProbeFixture() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-os-release-probe-test-'));
   const installerDir = path.join(dir, 'packaging/installer');
@@ -102,6 +106,18 @@ for (const [name, expectedPlatform] of [
     assert.doesNotMatch(result.stdout + result.stderr, /blocked system mutation/);
   });
 }
+
+test('push and tag workflows gate Pacman packages on Arch and CachyOS', () => {
+  for (const source of [read('.github/workflows/ci.yml'), read('.github/workflows/release.yml')]) {
+    assert.match(source, /archlinux:base-devel/);
+    assert.match(source, /cachyos\/cachyos:latest/);
+    assert.match(source, /packaging\/arch\/build\.sh target\/arch-dist/);
+    assert.match(source, /packaging\/arch\/verify\.sh target\/arch-dist fangtest/);
+    assert.match(source, /name: fang-arch-packages/);
+    assert.match(source, /arch-container/);
+    assert.match(source, /cachyos-container/);
+  }
+});
 
 test('real-file probe accepts only the curl stop sentinel', () => {
   const fixture = makeProbeFixture();

@@ -27,10 +27,12 @@ jobs:
       - run: node packaging/release/publish.test.mjs
       - run: node packaging/deb/verify.test.mjs
       - run: node --test packaging/rpm/build-script.test.mjs packaging/rpm/metadata.test.mjs
+      - run: node --test packaging/arch/build-script.test.mjs packaging/arch/metadata.test.mjs
       - run: >
           shellcheck install.sh packaging/install-from-source.sh
-          packaging/installer/check-os-release.sh packaging/rpm/build.sh
-          packaging/rpm/verify.sh packaging/deb/verify.sh packaging/release/publish.sh
+          packaging/installer/check-os-release.sh packaging/arch/build.sh
+          packaging/arch/verify.sh packaging/rpm/build.sh packaging/rpm/verify.sh
+          packaging/deb/verify.sh packaging/release/publish.sh
 
   daemon:
     name: protocol + daemon
@@ -209,3 +211,57 @@ jobs:
           name: fang-rpms
           path: target/rpm-dist
       - run: packaging/rpm/verify.sh target/rpm-dist
+
+  arch-build:
+    name: build Pacman packages (Arch)
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - run: >
+          pacman -Syu --noconfirm
+          git nodejs-lts-jod npm rust webkit2gtk-4.1 gtk3 librsvg
+          libayatana-appindicator systemd-libs openssl pkgconf libarchive
+          desktop-file-utils
+      - uses: actions/checkout@v4
+      - run: useradd --create-home builder && chown -R builder:builder "$GITHUB_WORKSPACE"
+      - run: runuser -u builder -- env PATH="$PATH" packaging/arch/build.sh target/arch-dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fang-arch-packages
+          path: target/arch-dist/*.pkg.tar.zst
+          if-no-files-found: error
+
+  arch-test:
+    name: test Pacman packages (${{ matrix.name }})
+    needs: arch-build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Arch Linux
+            image: archlinux:base-devel
+            capture: arch-container
+            platform: Arch Linux
+          - name: CachyOS
+            image: cachyos/cachyos:latest
+            capture: cachyos-container
+            platform: Arch Linux
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - run: >
+          pacman -Syu --noconfirm
+          git systemd python dbus xorg-server-xvfb xorg-xauth
+          desktop-file-utils procps-ng diffutils namcap libarchive util-linux
+      - uses: actions/checkout@v4
+      - name: os-release projection still matches this image
+        run: >
+          packaging/installer/check-os-release.sh
+          "${{ matrix.capture }}" "${{ matrix.platform }}"
+      - uses: actions/download-artifact@v4
+        with:
+          name: fang-arch-packages
+          path: target/arch-dist
+      - run: useradd --create-home fangtest
+      - run: packaging/arch/verify.sh target/arch-dist fangtest
