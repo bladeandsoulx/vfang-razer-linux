@@ -1,0 +1,4 @@
+{"id":"image_001","type":"image","path":"assets/dashboard.png","source":"existing","description":"dashboard","provenance":{"provider":"local","adopted":true}}
+{"id":"image_002","type":"image","path":"assets/fan-curve.png","source":"existing","description":"fan curve","provenance":{"provider":"local","adopted":true}}
+{"id":"image_003","type":"image","path":"assets/performance.png","source":"existing","description":"performance","provenance":{"provider":"local","adopted":true}}
+{"id":"image_004","type":"image","path":"assets/vfang-icon.png","source":"existing","description":"vfang icon","provenance":{"provider":"local","adopted":true}}

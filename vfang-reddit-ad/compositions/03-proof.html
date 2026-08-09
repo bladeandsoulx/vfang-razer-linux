@@ -1,0 +1,344 @@
+<template id="scene-proof-template">
+  <div
+    id="scene-proof-root"
+    data-composition-id="scene-proof"
+    data-width="1920"
+    data-height="1080"
+    data-duration="5.8"
+  >
+    <div class="scene-fill">
+      <div class="micro-grid" data-layout-ignore></div>
+      <div id="scene-proof-glow" class="hero-glow" data-layout-ignore></div>
+      <div id="scene-proof-ghost" class="ghost-word" data-layout-ignore>CONTROL</div>
+
+      <div id="scene-proof-camera" class="camera" data-layout-allow-overflow>
+        <div class="scene-content" data-layout-allow-occlusion>
+          <div class="header-row">
+            <p id="scene-proof-eyebrow" class="eyebrow">REAL CONTROL. ONE DASHBOARD.</p>
+            <div id="scene-proof-counter" class="screen-counter"><strong>03</strong><span>/ 05</span></div>
+          </div>
+
+          <div id="scene-proof-frame" class="product-frame">
+            <div class="frame-topbar">
+              <div class="frame-lights"><i></i><i></i><i></i></div>
+              <span>VFANG // SIMULATED HARDWARE VIEW</span>
+              <span class="frame-live"><b></b> LIVE</span>
+            </div>
+
+            <div class="capture-stage" data-layout-allow-overflow>
+              <img id="scene-proof-dashboard" class="capture capture-dashboard" src="assets/dashboard.png" alt="VFang live thermal dashboard" />
+              <img id="scene-proof-performance" class="capture capture-performance" src="assets/performance.png" alt="VFang performance controls" />
+              <img id="scene-proof-fan" class="capture capture-fan" src="assets/fan-curve.png" alt="VFang fan curve editor" />
+            </div>
+
+            <div class="focus-bracket bracket-a" data-layout-ignore></div>
+            <div class="focus-bracket bracket-b" data-layout-ignore></div>
+          </div>
+
+          <div class="proof-rail">
+            <span id="scene-proof-tag-telemetry" class="proof-tag active"><b>01</b> LIVE TELEMETRY</span>
+            <span id="scene-proof-tag-power" class="proof-tag"><b>02</b> POWER MODES</span>
+            <span id="scene-proof-tag-fan" class="proof-tag"><b>03</b> SAFE FAN CURVES</span>
+          </div>
+
+          <div id="scene-proof-footer" class="telemetry-footer">
+            <span>CPU</span><i></i><span>GPU</span><i></i><span>FAN</span><i></i><span>POWER</span><i></i><span>DISPLAY</span><i></i><span>LIGHTING</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      #scene-proof-root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        color: #eafbe6;
+        font-family: "Inter", sans-serif;
+      }
+
+      #scene-proof-root * {
+        box-sizing: border-box;
+      }
+
+      #scene-proof-root .scene-fill {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        background-color: #0a0c0d;
+      }
+
+      #scene-proof-root .micro-grid {
+        position: absolute;
+        inset: 0;
+        opacity: 0.24;
+        background-image:
+          linear-gradient(rgba(68, 214, 44, 0.09) 2px, rgba(68, 214, 44, 0) 2px),
+          linear-gradient(90deg, rgba(68, 214, 44, 0.09) 2px, rgba(68, 214, 44, 0) 2px);
+        background-size: 68px 68px;
+      }
+
+      #scene-proof-root .hero-glow {
+        position: absolute;
+        left: 330px;
+        top: 40px;
+        width: 1260px;
+        height: 1020px;
+        border-radius: 50%;
+        opacity: 0.25;
+        background: radial-gradient(circle, rgba(68, 214, 44, 0.5) 0%, rgba(31, 122, 18, 0.2) 35%, rgba(10, 12, 13, 0) 72%);
+        will-change: transform, opacity;
+      }
+
+      #scene-proof-root .ghost-word {
+        position: absolute;
+        left: -38px;
+        top: 390px;
+        color: rgba(68, 214, 44, 0.11);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 220px;
+        font-weight: 700;
+        letter-spacing: -0.08em;
+        writing-mode: vertical-rl;
+      }
+
+      #scene-proof-root .camera {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 50%;
+        will-change: transform;
+      }
+
+      #scene-proof-root .scene-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        gap: 20px;
+        padding: 44px 92px 38px;
+      }
+
+      #scene-proof-root .header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 64px;
+      }
+
+      #scene-proof-root .eyebrow {
+        margin: 0;
+        color: #eafbe6;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+      }
+
+      #scene-proof-root .screen-counter {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        color: #9aa6ae;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 24px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      #scene-proof-root .screen-counter strong {
+        color: #44d62c;
+        font-size: 46px;
+      }
+
+      #scene-proof-root .product-frame {
+        position: relative;
+        align-self: center;
+        width: 1600px;
+        height: 760px;
+        flex-shrink: 0;
+        overflow: hidden;
+        border: 3px solid #44d62c;
+        background: #131619;
+        box-shadow: 0 30px 100px rgba(0, 0, 0, 0.56);
+        will-change: transform, opacity;
+      }
+
+      #scene-proof-root .frame-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 58px;
+        padding: 0 24px;
+        border-bottom: 3px solid #2e363c;
+        color: #9aa6ae;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+      }
+
+      #scene-proof-root .frame-lights {
+        display: flex;
+        gap: 10px;
+      }
+
+      #scene-proof-root .frame-lights i {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: #2e363c;
+      }
+
+      #scene-proof-root .frame-lights i:first-child {
+        background: #44d62c;
+        box-shadow: 0 0 14px rgba(68, 214, 44, 0.7);
+      }
+
+      #scene-proof-root .frame-live {
+        color: #6fe55b;
+      }
+
+      #scene-proof-root .frame-live b {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        margin-right: 10px;
+        border-radius: 50%;
+        background: #44d62c;
+      }
+
+      #scene-proof-root .capture-stage {
+        position: relative;
+        width: 100%;
+        height: 702px;
+        overflow: hidden;
+        background: #0a0c0d;
+      }
+
+      #scene-proof-root .capture {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top center;
+        transform-origin: 50% 50%;
+        will-change: transform, opacity;
+      }
+
+      #scene-proof-root .capture-dashboard {
+        z-index: 1;
+      }
+
+      #scene-proof-root .capture-performance {
+        z-index: 2;
+      }
+
+      #scene-proof-root .capture-fan {
+        z-index: 3;
+      }
+
+      #scene-proof-root .focus-bracket {
+        position: absolute;
+        z-index: 6;
+        width: 72px;
+        height: 72px;
+        border-color: #44d62c;
+        border-style: solid;
+      }
+
+      #scene-proof-root .bracket-a {
+        top: 78px;
+        left: 24px;
+        border-width: 4px 0 0 4px;
+      }
+
+      #scene-proof-root .bracket-b {
+        right: 24px;
+        bottom: 24px;
+        border-width: 0 4px 4px 0;
+      }
+
+      #scene-proof-root .proof-rail {
+        display: grid;
+        align-self: center;
+        width: 1600px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      #scene-proof-root .proof-tag {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 72px;
+        border: 3px solid #2e363c;
+        background: #131619;
+        color: #eafbe6;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        will-change: transform, opacity;
+      }
+
+      #scene-proof-root .proof-tag b {
+        margin-right: 18px;
+        color: #44d62c;
+      }
+
+      #scene-proof-root .proof-tag.active {
+        border-color: #44d62c;
+        color: #6fe55b;
+      }
+
+      #scene-proof-root .telemetry-footer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        gap: 22px;
+        color: #9aa6ae;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+      }
+
+      #scene-proof-root .telemetry-footer i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #44d62c;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const timeline = gsap.timeline({ paused: true });
+
+      timeline
+        .fromTo("#scene-proof-glow", { opacity: 0, scale: 0.78 }, { opacity: 0.25, scale: 1, duration: 1.15, ease: "sine.out" }, 0)
+        .fromTo("#scene-proof-ghost", { opacity: 0, y: 80 }, { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, 0.05)
+        .fromTo("#scene-proof-camera", { scale: 0.955 }, { scale: 1, duration: 0.95, ease: "power3.out" }, 0)
+        .fromTo("#scene-proof-eyebrow", { opacity: 0, x: -52 }, { opacity: 1, x: 0, duration: 0.48, ease: "power3.out" }, 0.18)
+        .fromTo("#scene-proof-counter", { opacity: 0, x: 52 }, { opacity: 1, x: 0, duration: 0.48, ease: "power3.out" }, 0.18)
+        .fromTo("#scene-proof-frame", { opacity: 0, y: 66, scale: 0.965 }, { opacity: 1, y: 0, scale: 1, duration: 0.68, ease: "power4.out" }, 0.32)
+        .fromTo("#scene-proof-dashboard", { opacity: 0, scale: 1.035 }, { opacity: 1, scale: 1, duration: 0.55, ease: "power3.out" }, 0.6)
+        .fromTo("#scene-proof-tag-telemetry", { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.42, ease: "expo.out" }, 0.78)
+        .fromTo("#scene-proof-footer", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.44, ease: "power3.out" }, 0.94)
+        .fromTo("#scene-proof-performance", { opacity: 0, scale: 0.94, x: 54 }, { opacity: 1, scale: 1, x: 0, duration: 0.62, ease: "power4.out" }, 1.82)
+        .fromTo("#scene-proof-tag-power", { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.42, ease: "expo.out" }, 2.02)
+        .fromTo("#scene-proof-fan", { opacity: 0, scale: 0.94, x: -54 }, { opacity: 1, scale: 1, x: 0, duration: 0.62, ease: "power4.out" }, 3.28)
+        .fromTo("#scene-proof-tag-fan", { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.42, ease: "expo.out" }, 3.48)
+        .to("#scene-proof-camera", { scale: 1.022, duration: 1.3, ease: "sine.inOut" }, 3.75)
+        .to("#scene-proof-glow", { opacity: 0.32, scale: 1.04, duration: 1.45, ease: "sine.inOut" }, 3.7);
+
+      window.__timelines["scene-proof"] = timeline;
+    </script>
+  </div>
+</template>

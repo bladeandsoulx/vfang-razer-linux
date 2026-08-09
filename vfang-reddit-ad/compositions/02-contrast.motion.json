@@ -1,0 +1,16 @@
+{
+  "scene": "02-contrast",
+  "duration_s": 3.2,
+  "duration": 3.2,
+  "rules": ["split-tilt-cards", "ambient-glow-bloom"],
+  "entry": { "vector": "opposed cards travel 320px toward center", "from_rest": false },
+  "exit": { "vector": "ambient glow expands 3.5%", "still_moving": true },
+  "assertions": [
+    { "kind": "appearsBy", "selector": "#scene-contrast-headline", "bySec": 0.9 },
+    { "kind": "appearsBy", "selector": "#scene-contrast-right-card", "bySec": 1.25 },
+    { "kind": "before", "a": "#scene-contrast-headline", "b": "#scene-contrast-closing" },
+    { "kind": "staysInFrame", "selector": "#scene-contrast-left-card" },
+    { "kind": "staysInFrame", "selector": "#scene-contrast-right-card" },
+    { "kind": "keepsMoving", "withinSelector": "#scene-contrast-root", "maxStaticSec": 1.5 }
+  ]
+}

@@ -1,0 +1,320 @@
+<template id="scene-action-template">
+  <div
+    id="scene-action-root"
+    data-composition-id="scene-action"
+    data-width="1920"
+    data-height="1080"
+    data-duration="3.7"
+  >
+    <div class="scene-fill">
+      <div class="micro-grid" data-layout-ignore></div>
+      <div id="scene-action-glow" class="hero-glow" data-layout-ignore></div>
+      <div id="scene-action-ghost" class="ghost-fang" data-layout-ignore>V</div>
+
+      <div id="scene-action-content" class="scene-content" data-layout-allow-occlusion>
+        <div class="brand-row">
+          <div id="scene-action-lockup" class="brand-lockup">
+            <img id="scene-action-mark" src="assets/vfang-icon.png" alt="" />
+            <span id="scene-action-wordmark">VFANG</span>
+          </div>
+          <span id="scene-action-index" class="index">05 / 05</span>
+        </div>
+
+        <div class="cta-layout">
+          <div class="cta-copy">
+            <p id="scene-action-eyebrow" class="eyebrow">RAZER BLADE CONTROL FOR LINUX</p>
+            <h1 aria-label="Take back your Blade.">
+              <span id="scene-action-line-1">TAKE BACK</span>
+              <span id="scene-action-line-2" class="accent">YOUR BLADE.</span>
+            </h1>
+          </div>
+
+          <div class="install-column">
+            <div id="scene-action-install" class="install-bar">
+              <span class="prompt">$</span>
+              <strong>COPY. PASTE. DONE.</strong>
+              <span class="install-note">One-command install</span>
+            </div>
+            <p id="scene-action-repo" class="repo-url">github.com/bladeandsoulx/vfang-razer-linux</p>
+            <div id="scene-action-badges" class="final-badges">
+              <span>48 MODELS</span>
+              <span>OPEN SOURCE</span>
+              <span>LINUX</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-row">
+          <p id="scene-action-legal">For supported Razer Blade laptops. VFang is not affiliated with Razer.</p>
+          <span id="scene-action-status" class="status"><i></i> READY TO INSTALL</span>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      #scene-action-root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        color: #eafbe6;
+        font-family: "Inter", sans-serif;
+      }
+
+      #scene-action-root * {
+        box-sizing: border-box;
+      }
+
+      #scene-action-root .scene-fill {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        background-color: #0a0c0d;
+      }
+
+      #scene-action-root .micro-grid {
+        position: absolute;
+        inset: 0;
+        opacity: 0.23;
+        background-image:
+          linear-gradient(rgba(68, 214, 44, 0.1) 2px, rgba(68, 214, 44, 0) 2px),
+          linear-gradient(90deg, rgba(68, 214, 44, 0.1) 2px, rgba(68, 214, 44, 0) 2px);
+        background-size: 72px 72px;
+      }
+
+      #scene-action-root .hero-glow {
+        position: absolute;
+        left: -120px;
+        top: 20px;
+        width: 1080px;
+        height: 1040px;
+        border-radius: 50%;
+        opacity: 0.3;
+        background: radial-gradient(circle, rgba(68, 214, 44, 0.62) 0%, rgba(31, 122, 18, 0.23) 34%, rgba(10, 12, 13, 0) 72%);
+        will-change: transform, opacity;
+      }
+
+      #scene-action-root .ghost-fang {
+        position: absolute;
+        right: -52px;
+        top: -162px;
+        color: rgba(68, 214, 44, 0.11);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 920px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      #scene-action-root .scene-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        gap: 36px;
+        padding: 64px 106px 58px;
+      }
+
+      #scene-action-root .brand-row,
+      #scene-action-root .footer-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #scene-action-root .brand-lockup {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+      }
+
+      #scene-action-root .brand-lockup img {
+        display: block;
+        width: 104px;
+        height: 104px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 24px rgba(68, 214, 44, 0.52));
+        will-change: transform, opacity;
+      }
+
+      #scene-action-root .brand-lockup span {
+        color: #6fe55b;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 54px;
+        font-weight: 700;
+        letter-spacing: 0.3em;
+      }
+
+      #scene-action-root .index,
+      #scene-action-root .eyebrow {
+        margin: 0;
+        color: #9aa6ae;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+      }
+
+      #scene-action-root .index {
+        color: #6fe55b;
+      }
+
+      #scene-action-root .cta-layout {
+        display: grid;
+        flex: 1;
+        grid-template-columns: 1.08fr 0.92fr;
+        align-items: center;
+        gap: 84px;
+      }
+
+      #scene-action-root .cta-copy,
+      #scene-action-root .install-column {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        min-width: 0;
+      }
+
+      #scene-action-root h1 {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin: 0;
+        color: #eafbe6;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 126px;
+        font-weight: 700;
+        line-height: 0.97;
+        letter-spacing: -0.055em;
+      }
+
+      #scene-action-root h1 span {
+        display: block;
+        will-change: transform, opacity;
+      }
+
+      #scene-action-root h1 .accent {
+        color: #44d62c;
+      }
+
+      #scene-action-root .install-bar {
+        display: grid;
+        min-height: 150px;
+        grid-template-columns: 52px 1fr;
+        align-items: center;
+        gap: 12px 22px;
+        padding: 28px 34px;
+        border: 3px solid #44d62c;
+        background: #131619;
+        box-shadow: 0 24px 70px rgba(31, 122, 18, 0.28);
+        transform-origin: left center;
+        will-change: transform, opacity;
+      }
+
+      #scene-action-root .prompt {
+        grid-row: 1 / 3;
+        color: #44d62c;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 48px;
+        font-weight: 700;
+      }
+
+      #scene-action-root .install-bar strong {
+        color: #eafbe6;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 38px;
+        letter-spacing: -0.02em;
+      }
+
+      #scene-action-root .install-note {
+        color: #9aa6ae;
+        font-size: 28px;
+      }
+
+      #scene-action-root .repo-url {
+        margin: 0;
+        color: #6fe55b;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 27px;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+      }
+
+      #scene-action-root .final-badges {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      #scene-action-root .final-badges span {
+        display: grid;
+        place-items: center;
+        min-height: 76px;
+        border: 3px solid #2e363c;
+        background: #181c20;
+        color: #eafbe6;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 21px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        will-change: transform, opacity;
+      }
+
+      #scene-action-root .footer-row {
+        min-height: 80px;
+        border-top: 3px solid #2e363c;
+        padding-top: 20px;
+      }
+
+      #scene-action-root .footer-row p {
+        margin: 0;
+        color: #9aa6ae;
+        font-size: 25px;
+      }
+
+      #scene-action-root .status {
+        color: #6fe55b;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 21px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+      }
+
+      #scene-action-root .status i {
+        display: inline-block;
+        width: 13px;
+        height: 13px;
+        margin-right: 12px;
+        border-radius: 50%;
+        background: #44d62c;
+        box-shadow: 0 0 16px rgba(68, 214, 44, 0.75);
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const timeline = gsap.timeline({ paused: true });
+
+      timeline
+        .fromTo("#scene-action-glow", { opacity: 0, scale: 0.76 }, { opacity: 0.3, scale: 1, duration: 1.05, ease: "sine.out" }, 0)
+        .fromTo("#scene-action-ghost", { opacity: 0, rotate: -7, x: 80 }, { opacity: 1, rotate: 0, x: 0, duration: 0.95, ease: "power3.out" }, 0.04)
+        .fromTo("#scene-action-mark", { opacity: 0, scale: 0.4, rotate: -12 }, { opacity: 1, scale: 1, rotate: 0, duration: 0.6, ease: "power4.out" }, 0.12)
+        .fromTo("#scene-action-wordmark", { opacity: 0, x: -42 }, { opacity: 1, x: 0, duration: 0.46, ease: "power3.out" }, 0.28)
+        .fromTo("#scene-action-index", { opacity: 0, x: 42 }, { opacity: 1, x: 0, duration: 0.42, ease: "power3.out" }, 0.2)
+        .fromTo("#scene-action-eyebrow", { opacity: 0, y: 28 }, { opacity: 1, y: 0, duration: 0.42, ease: "power3.out" }, 0.44)
+        .fromTo("#scene-action-line-1", { opacity: 0, y: 82 }, { opacity: 1, y: 0, duration: 0.56, ease: "power4.out" }, 0.55)
+        .fromTo("#scene-action-line-2", { opacity: 0, y: 82 }, { opacity: 1, y: 0, duration: 0.56, ease: "power4.out" }, 0.72)
+        .fromTo("#scene-action-install", { opacity: 0, scaleX: 0.35, x: 90 }, { opacity: 1, scaleX: 1, x: 0, duration: 0.62, ease: "expo.out", transformOrigin: "left center" }, 0.72)
+        .fromTo("#scene-action-repo", { opacity: 0, x: 48 }, { opacity: 1, x: 0, duration: 0.44, ease: "power3.out" }, 1.12)
+        .fromTo("#scene-action-badges span", { opacity: 0, y: 34, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.42, stagger: 0.1, ease: "power3.out" }, 1.3)
+        .fromTo("#scene-action-legal", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.44, ease: "power3.out" }, 1.66)
+        .fromTo("#scene-action-status", { opacity: 0, x: 42 }, { opacity: 1, x: 0, duration: 0.44, ease: "power3.out" }, 1.7)
+        .to("#scene-action-glow", { opacity: 0.38, scale: 1.045, duration: 1.2, ease: "sine.inOut" }, 1.82)
+        .to("#scene-action-content", { opacity: 0, duration: 0.34, ease: "power2.in" }, 3.3);
+
+      window.__timelines["scene-action"] = timeline;
+    </script>
+  </div>
+</template>

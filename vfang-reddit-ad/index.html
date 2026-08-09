@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>VFang — Razer Blade Control for Linux</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        margin: 0;
+        overflow: hidden;
+        background: #0a0c0d;
+      }
+
+      #vfang-reddit-ad {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0a0c0d;
+      }
+
+      .scene-slot {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        width: 1920px;
+        height: 1080px;
+      }
+
+      .transition {
+        position: absolute;
+        inset: 0;
+        z-index: 50;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      .scan-cover,
+      .bar-cover,
+      .terminal-cover {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        will-change: transform;
+      }
+
+      .scan-cover {
+        background: #44d62c;
+      }
+
+      .scan-edge {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 28px;
+        height: 1080px;
+        background: #eafbe6;
+        box-shadow: 0 0 60px rgba(68, 214, 44, 0.9);
+        will-change: transform;
+      }
+
+      .shutter-half {
+        position: absolute;
+        left: 0;
+        width: 1920px;
+        height: 540px;
+        background: #0a0c0d;
+        border-color: #44d62c;
+        border-style: solid;
+        will-change: transform;
+      }
+
+      .shutter-top {
+        top: 0;
+        border-width: 0 0 4px;
+      }
+
+      .shutter-bottom {
+        bottom: 0;
+        border-width: 4px 0 0;
+      }
+
+      .bar-cover:nth-child(1) {
+        background: #1f7a12;
+      }
+
+      .bar-cover:nth-child(2) {
+        background: #44d62c;
+      }
+
+      .bar-cover:nth-child(3) {
+        background: #0a0c0d;
+      }
+
+      .terminal-cover {
+        background: #0a0c0d;
+        transform-origin: center center;
+      }
+
+      .terminal-line {
+        position: absolute;
+        top: 536px;
+        left: 0;
+        width: 1920px;
+        height: 8px;
+        background: #44d62c;
+        box-shadow: 0 0 42px rgba(68, 214, 44, 0.8);
+        transform-origin: center center;
+        will-change: transform;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="vfang-reddit-ad"
+      data-composition-id="vfang-reddit-ad"
+      data-start="0"
+      data-duration="20"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div
+        id="scene-slot-ownership"
+        class="clip scene-slot"
+        data-composition-id="scene-ownership"
+        data-composition-src="compositions/01-ownership.html"
+        data-start="0"
+        data-duration="3.2"
+        data-track-index="1"
+      ></div>
+
+      <div
+        id="scene-slot-contrast"
+        class="clip scene-slot"
+        data-composition-id="scene-contrast"
+        data-composition-src="compositions/02-contrast.html"
+        data-start="3.2"
+        data-duration="3.2"
+        data-track-index="1"
+      ></div>
+
+      <div
+        id="scene-slot-proof"
+        class="clip scene-slot"
+        data-composition-id="scene-proof"
+        data-composition-src="compositions/03-proof.html"
+        data-start="6.4"
+        data-duration="5.8"
+        data-track-index="1"
+      ></div>
+
+      <div
+        id="scene-slot-local"
+        class="clip scene-slot"
+        data-composition-id="scene-local-first"
+        data-composition-src="compositions/04-local-first.html"
+        data-start="12.2"
+        data-duration="4.1"
+        data-track-index="1"
+      ></div>
+
+      <div
+        id="scene-slot-action"
+        class="clip scene-slot"
+        data-composition-id="scene-action"
+        data-composition-src="compositions/05-action.html"
+        data-start="16.3"
+        data-duration="3.7"
+        data-track-index="1"
+      ></div>
+
+      <div
+        id="transition-scan"
+        class="clip transition"
+        data-start="2.9"
+        data-duration="0.56"
+        data-track-index="2"
+        data-layout-ignore
+      >
+        <div id="transition-scan-cover" class="scan-cover" data-layout-allow-occlusion></div>
+        <div id="transition-scan-edge" class="scan-edge" data-layout-allow-occlusion></div>
+      </div>
+
+      <div
+        id="transition-shutter"
+        class="clip transition"
+        data-start="6.08"
+        data-duration="0.64"
+        data-track-index="3"
+        data-layout-ignore
+      >
+        <div id="transition-shutter-top" class="shutter-half shutter-top" data-layout-allow-occlusion></div>
+        <div id="transition-shutter-bottom" class="shutter-half shutter-bottom" data-layout-allow-occlusion></div>
+      </div>
+
+      <div
+        id="transition-bars"
+        class="clip transition"
+        data-start="11.88"
+        data-duration="0.66"
+        data-track-index="4"
+        data-layout-ignore
+      >
+        <div id="transition-bar-1" class="bar-cover" data-layout-allow-occlusion></div>
+        <div id="transition-bar-2" class="bar-cover" data-layout-allow-occlusion></div>
+        <div id="transition-bar-3" class="bar-cover" data-layout-allow-occlusion></div>
+      </div>
+
+      <div
+        id="transition-terminal"
+        class="clip transition"
+        data-start="15.98"
+        data-duration="0.6"
+        data-track-index="5"
+        data-layout-ignore
+      >
+        <div id="transition-terminal-cover" class="terminal-cover" data-layout-allow-occlusion></div>
+        <div id="transition-terminal-line" class="terminal-line" data-layout-allow-occlusion></div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const timeline = gsap.timeline({ paused: true });
+
+      timeline
+        .fromTo("#transition-scan-cover", { x: -1920 }, { x: 0, duration: 0.26, ease: "power3.inOut" }, 2.9)
+        .fromTo("#transition-scan-edge", { x: -28 }, { x: 1892, duration: 0.26, ease: "power3.inOut" }, 2.9)
+        .to("#transition-scan-cover", { x: 1920, duration: 0.26, ease: "power3.inOut" }, 3.18)
+        .to("#transition-scan-edge", { x: 1920, duration: 0.26, ease: "power3.inOut" }, 3.18)
+        .fromTo("#transition-shutter-top", { y: -540 }, { y: 0, duration: 0.3, ease: "power3.in" }, 6.08)
+        .fromTo("#transition-shutter-bottom", { y: 540 }, { y: 0, duration: 0.3, ease: "power3.in" }, 6.08)
+        .to("#transition-shutter-top", { y: -540, duration: 0.3, ease: "power3.out" }, 6.4)
+        .to("#transition-shutter-bottom", { y: 540, duration: 0.3, ease: "power3.out" }, 6.4)
+        .fromTo("#transition-bar-1", { x: -1920 }, { x: 0, duration: 0.28, ease: "power4.inOut" }, 11.88)
+        .fromTo("#transition-bar-2", { x: -1920 }, { x: 0, duration: 0.28, ease: "power4.inOut" }, 11.92)
+        .fromTo("#transition-bar-3", { x: -1920 }, { x: 0, duration: 0.28, ease: "power4.inOut" }, 11.96)
+        .to("#transition-bar-1", { x: 1920, duration: 0.28, ease: "power4.inOut" }, 12.2)
+        .to("#transition-bar-2", { x: 1920, duration: 0.28, ease: "power4.inOut" }, 12.24)
+        .to("#transition-bar-3", { x: 1920, duration: 0.28, ease: "power4.inOut" }, 12.28)
+        .fromTo("#transition-terminal-cover", { scaleX: 0 }, { scaleX: 1, duration: 0.3, ease: "expo.in" }, 15.98)
+        .fromTo("#transition-terminal-line", { scaleX: 0 }, { scaleX: 1, duration: 0.3, ease: "expo.in" }, 15.98)
+        .to("#transition-terminal-cover", { scaleX: 0, duration: 0.28, ease: "expo.out" }, 16.3)
+        .to("#transition-terminal-line", { scaleX: 0, duration: 0.28, ease: "expo.out" }, 16.3);
+
+      window.__timelines["vfang-reddit-ad"] = timeline;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "scene": "03-proof",
+  "duration_s": 5.8,
+  "duration": 5.8,
+  "rules": ["scale-swap-transition", "multi-phase-camera", "ambient-glow-bloom"],
+  "entry": { "vector": "camera pushes from 95.5% while the UI rises 66px", "from_rest": false },
+  "exit": { "vector": "camera continues a 2.2% push", "still_moving": true },
+  "assertions": [
+    { "kind": "appearsBy", "selector": "#scene-proof-dashboard", "bySec": 1.2 },
+    { "kind": "appearsBy", "selector": "#scene-proof-performance", "bySec": 2.5 },
+    { "kind": "appearsBy", "selector": "#scene-proof-fan", "bySec": 4.0 },
+    { "kind": "before", "a": "#scene-proof-tag-telemetry", "b": "#scene-proof-tag-power" },
+    { "kind": "before", "a": "#scene-proof-tag-power", "b": "#scene-proof-tag-fan" },
+    { "kind": "staysInFrame", "selector": "#scene-proof-frame" },
+    { "kind": "keepsMoving", "withinSelector": "#scene-proof-root", "maxStaticSec": 1.6 }
+  ]
+}

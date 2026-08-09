@@ -1,0 +1,314 @@
+<template id="scene-contrast-template">
+  <div
+    id="scene-contrast-root"
+    data-composition-id="scene-contrast"
+    data-width="1920"
+    data-height="1080"
+    data-duration="3.2"
+  >
+    <div class="scene-fill">
+      <div class="micro-grid" data-layout-ignore></div>
+      <div id="scene-contrast-glow" class="hero-glow" data-layout-ignore></div>
+      <div id="scene-contrast-divider" class="center-divider" data-layout-ignore></div>
+      <div id="scene-contrast-ghost-left" class="ghost-label ghost-left" data-layout-ignore>WINDOWS</div>
+      <div id="scene-contrast-ghost-right" class="ghost-label ghost-right" data-layout-ignore>LINUX</div>
+
+      <div class="scene-content" data-layout-allow-occlusion>
+        <div class="header-row">
+          <p id="scene-contrast-eyebrow" class="eyebrow">THE OS DIVIDE</p>
+          <span id="scene-contrast-index" class="index">02 / 05</span>
+        </div>
+
+        <h1 id="scene-contrast-headline">SYNAPSE STOPS AT WINDOWS.</h1>
+
+        <div id="scene-contrast-stage" class="split-stage">
+          <article id="scene-contrast-left-card" class="compare-card card-left">
+            <div class="plate-top">
+              <span class="plate-name">SYNAPSE 4</span>
+              <i class="status-dot warning"></i>
+            </div>
+            <strong>WINDOWS 10 / 11</strong>
+            <p>Official system requirement</p>
+            <span class="platform-tag warning-tag">WINDOWS</span>
+          </article>
+
+          <article id="scene-contrast-right-card" class="compare-card card-right">
+            <div class="plate-top">
+              <span class="plate-name">VFANG</span>
+              <i class="status-dot active"></i>
+            </div>
+            <strong>BUILT FOR LINUX</strong>
+            <p>Focused Razer Blade control</p>
+            <span class="platform-tag linux-tag">LINUX</span>
+          </article>
+        </div>
+
+        <div class="closing-row">
+          <h2 id="scene-contrast-closing">VFANG STARTS ON LINUX.</h2>
+          <p id="scene-contrast-qualifier">Razer Blade laptop control.</p>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      #scene-contrast-root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        color: #eafbe6;
+        font-family: "Inter", sans-serif;
+      }
+
+      #scene-contrast-root * {
+        box-sizing: border-box;
+      }
+
+      #scene-contrast-root .scene-fill {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        background-color: #0a0c0d;
+        perspective: 1800px;
+      }
+
+      #scene-contrast-root .micro-grid {
+        position: absolute;
+        inset: 0;
+        opacity: 0.2;
+        background-image:
+          linear-gradient(rgba(154, 166, 174, 0.12) 2px, rgba(154, 166, 174, 0) 2px),
+          linear-gradient(90deg, rgba(154, 166, 174, 0.12) 2px, rgba(154, 166, 174, 0) 2px);
+        background-size: 84px 84px;
+      }
+
+      #scene-contrast-root .hero-glow {
+        position: absolute;
+        right: -90px;
+        top: 160px;
+        width: 980px;
+        height: 780px;
+        border-radius: 50%;
+        opacity: 0.28;
+        background: radial-gradient(circle, rgba(68, 214, 44, 0.58) 0%, rgba(31, 122, 18, 0.22) 36%, rgba(10, 12, 13, 0) 72%);
+        will-change: transform, opacity;
+      }
+
+      #scene-contrast-root .center-divider {
+        position: absolute;
+        top: 124px;
+        bottom: 118px;
+        left: 958px;
+        width: 4px;
+        background: #2e363c;
+      }
+
+      #scene-contrast-root .ghost-label {
+        position: absolute;
+        top: 382px;
+        color: rgba(234, 251, 230, 0.1);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 150px;
+        font-weight: 700;
+        letter-spacing: -0.06em;
+      }
+
+      #scene-contrast-root .ghost-left {
+        left: -46px;
+      }
+
+      #scene-contrast-root .ghost-right {
+        right: 0;
+        color: rgba(68, 214, 44, 0.13);
+      }
+
+      #scene-contrast-root .scene-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        gap: 28px;
+        padding: 66px 104px 62px;
+      }
+
+      #scene-contrast-root .header-row,
+      #scene-contrast-root .closing-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #scene-contrast-root .eyebrow,
+      #scene-contrast-root .index,
+      #scene-contrast-root .qualifier {
+        margin: 0;
+        color: #9aa6ae;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+      }
+
+      #scene-contrast-root .index {
+        color: #6fe55b;
+      }
+
+      #scene-contrast-root h1 {
+        max-width: 1600px;
+        margin: 0;
+        color: #eafbe6;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 82px;
+        font-weight: 700;
+        line-height: 1.04;
+        letter-spacing: -0.045em;
+      }
+
+      #scene-contrast-root .split-stage {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        gap: 104px;
+        transform-style: preserve-3d;
+      }
+
+      #scene-contrast-root .compare-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 710px;
+        height: 360px;
+        gap: 22px;
+        padding: 42px 48px;
+        border: 3px solid #2e363c;
+        background: #131619;
+        transform-style: preserve-3d;
+        will-change: transform, opacity;
+      }
+
+      #scene-contrast-root .card-left {
+        box-shadow: -24px 28px 64px rgba(0, 0, 0, 0.44);
+      }
+
+      #scene-contrast-root .card-right {
+        border-color: #44d62c;
+        box-shadow: 24px 28px 72px rgba(31, 122, 18, 0.32);
+      }
+
+      #scene-contrast-root .plate-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #scene-contrast-root .plate-name {
+        color: #9aa6ae;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+      }
+
+      #scene-contrast-root .status-dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+      }
+
+      #scene-contrast-root .status-dot.warning {
+        background: #ffb454;
+        box-shadow: 0 0 20px rgba(255, 180, 84, 0.5);
+      }
+
+      #scene-contrast-root .status-dot.active {
+        background: #44d62c;
+        box-shadow: 0 0 24px rgba(68, 214, 44, 0.7);
+      }
+
+      #scene-contrast-root .compare-card strong {
+        color: #eafbe6;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 50px;
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+
+      #scene-contrast-root .card-right strong {
+        color: #6fe55b;
+      }
+
+      #scene-contrast-root .compare-card p {
+        margin: 0;
+        color: #9aa6ae;
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      #scene-contrast-root .platform-tag {
+        align-self: flex-start;
+        padding: 12px 18px;
+        border: 2px solid currentColor;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+      }
+
+      #scene-contrast-root .warning-tag {
+        color: #ffb454;
+      }
+
+      #scene-contrast-root .linux-tag {
+        color: #44d62c;
+      }
+
+      #scene-contrast-root .closing-row {
+        min-height: 100px;
+        border-top: 3px solid #2e363c;
+        padding-top: 24px;
+      }
+
+      #scene-contrast-root h2 {
+        margin: 0;
+        color: #44d62c;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 68px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.045em;
+      }
+
+      #scene-contrast-root .qualifier {
+        color: #9aa6ae;
+        font-size: 22px;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const timeline = gsap.timeline({ paused: true });
+
+      timeline
+        .fromTo("#scene-contrast-glow", { opacity: 0, scale: 0.8 }, { opacity: 0.28, scale: 1, duration: 0.95, ease: "sine.out" }, 0)
+        .fromTo("#scene-contrast-divider", { opacity: 0, scaleY: 0 }, { opacity: 1, scaleY: 1, duration: 0.62, ease: "expo.out", transformOrigin: "center center" }, 0.1)
+        .fromTo("#scene-contrast-ghost-left", { opacity: 0, x: -70 }, { opacity: 1, x: 0, duration: 0.72, ease: "power3.out" }, 0.04)
+        .fromTo("#scene-contrast-ghost-right", { opacity: 0, x: 70 }, { opacity: 1, x: 0, duration: 0.72, ease: "power3.out" }, 0.08)
+        .fromTo("#scene-contrast-eyebrow", { opacity: 0, x: -42 }, { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" }, 0.18)
+        .fromTo("#scene-contrast-index", { opacity: 0, x: 42 }, { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" }, 0.18)
+        .fromTo("#scene-contrast-headline", { opacity: 0, y: 54 }, { opacity: 1, y: 0, duration: 0.52, ease: "power4.out" }, 0.3)
+        .fromTo("#scene-contrast-left-card", { opacity: 0, x: -320, rotateY: 22 }, { opacity: 1, x: 0, rotateY: -4, duration: 0.72, ease: "power4.out" }, 0.52)
+        .fromTo("#scene-contrast-right-card", { opacity: 0, x: 320, rotateY: -22 }, { opacity: 1, x: 0, rotateY: 4, duration: 0.72, ease: "power4.out" }, 0.62)
+        .fromTo("#scene-contrast-closing", { opacity: 0, y: 38 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 1.16)
+        .fromTo("#scene-contrast-qualifier", { opacity: 0, x: 44 }, { opacity: 1, x: 0, duration: 0.46, ease: "power3.out" }, 1.3)
+        .to("#scene-contrast-left-card", { rotateY: 0, duration: 0.62, ease: "sine.inOut" }, 1.42)
+        .to("#scene-contrast-right-card", { rotateY: 0, duration: 0.62, ease: "sine.inOut" }, 1.42)
+        .to("#scene-contrast-glow", { opacity: 0.34, scale: 1.035, duration: 1.15, ease: "sine.inOut" }, 1.55);
+
+      window.__timelines["scene-contrast"] = timeline;
+    </script>
+  </div>
+</template>

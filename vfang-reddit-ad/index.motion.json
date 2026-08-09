@@ -1,0 +1,16 @@
+{
+  "duration": 20,
+  "assertions": [
+    { "kind": "appearsBy", "selector": "#scene-ownership-line-1", "bySec": 1.1 },
+    { "kind": "appearsBy", "selector": "#scene-contrast-headline", "bySec": 4.1 },
+    { "kind": "appearsBy", "selector": "#scene-proof-dashboard", "bySec": 7.6 },
+    { "kind": "appearsBy", "selector": "#scene-local-row-3", "bySec": 14.0 },
+    { "kind": "appearsBy", "selector": "#scene-action-install", "bySec": 17.7 },
+    { "kind": "before", "a": "#scene-action-line-1", "b": "#scene-action-repo" },
+    { "kind": "staysInFrame", "selector": "#scene-contrast-right-card" },
+    { "kind": "staysInFrame", "selector": "#scene-proof-frame" },
+    { "kind": "staysInFrame", "selector": "#scene-local-row-2" },
+    { "kind": "staysInFrame", "selector": "#scene-action-install" },
+    { "kind": "keepsMoving", "withinSelector": "#vfang-reddit-ad", "maxStaticSec": 1.8 }
+  ]
+}

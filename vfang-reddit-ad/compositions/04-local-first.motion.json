@@ -1,0 +1,15 @@
+{
+  "scene": "04-local-first",
+  "duration_s": 4.1,
+  "duration": 4.1,
+  "rules": ["waterfall-entry", "spring-pop-entrance", "ambient-glow-bloom"],
+  "entry": { "vector": "benefit rows alternate 190px from left and right", "from_rest": false },
+  "exit": { "vector": "ambient glow expands 3.5%", "still_moving": true },
+  "assertions": [
+    { "kind": "appearsBy", "selector": "#scene-local-title", "bySec": 0.9 },
+    { "kind": "appearsBy", "selector": "#scene-local-row-3", "bySec": 1.8 },
+    { "kind": "before", "a": "#scene-local-row-1", "b": "#scene-local-row-3" },
+    { "kind": "staysInFrame", "selector": "#scene-local-row-2" },
+    { "kind": "keepsMoving", "withinSelector": "#scene-local-root", "maxStaticSec": 1.6 }
+  ]
+}

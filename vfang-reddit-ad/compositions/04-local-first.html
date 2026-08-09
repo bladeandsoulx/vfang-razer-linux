@@ -1,0 +1,288 @@
+<template id="scene-local-first-template">
+  <div
+    id="scene-local-root"
+    data-composition-id="scene-local-first"
+    data-width="1920"
+    data-height="1080"
+    data-duration="4.1"
+  >
+    <div class="scene-fill">
+      <div class="micro-grid" data-layout-ignore></div>
+      <div id="scene-local-glow" class="hero-glow" data-layout-ignore></div>
+      <div id="scene-local-ghost" class="ghost-word" data-layout-ignore>LOCAL</div>
+      <svg id="scene-local-circuit" class="circuit" viewBox="0 0 1920 1080" aria-hidden="true" data-layout-ignore>
+        <path d="M190 312 H270 V450 H1640 V585 H270 V722 H1640" />
+        <circle cx="270" cy="450" r="9" />
+        <circle cx="1640" cy="585" r="9" />
+        <circle cx="270" cy="722" r="9" />
+      </svg>
+
+      <div class="scene-content" data-layout-allow-occlusion>
+        <div class="header-row">
+          <p id="scene-local-eyebrow" class="eyebrow">LOCAL-FIRST BY DESIGN</p>
+          <span id="scene-local-index" class="index">04 / 05</span>
+        </div>
+
+        <h1 id="scene-local-title">YOUR SETTINGS. YOUR MACHINE.</h1>
+
+        <div class="benefit-stack">
+          <article id="scene-local-row-1" class="benefit-row">
+            <span id="scene-local-icon-1" class="number-disc">01</span>
+            <strong>NO ACCOUNT</strong>
+            <span class="state">IDENTITY / NOT REQUIRED</span>
+          </article>
+          <article id="scene-local-row-2" class="benefit-row">
+            <span id="scene-local-icon-2" class="number-disc">02</span>
+            <strong>CONTROLS WORK OFFLINE</strong>
+            <span class="state">CONTROL / LOCAL</span>
+          </article>
+          <article id="scene-local-row-3" class="benefit-row">
+            <span id="scene-local-icon-3" class="number-disc">03</span>
+            <strong>NO ADS</strong>
+            <span class="state">ATTENTION / YOURS</span>
+          </article>
+        </div>
+
+        <div class="closing-row">
+          <p id="scene-local-support">Your settings stay between you and your Blade.</p>
+          <span id="scene-local-oss" class="oss-badge"><i></i> OPEN SOURCE · GPL-2.0</span>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      #scene-local-root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        color: #eafbe6;
+        font-family: "Inter", sans-serif;
+      }
+
+      #scene-local-root * {
+        box-sizing: border-box;
+      }
+
+      #scene-local-root .scene-fill {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        background-color: #0a0c0d;
+      }
+
+      #scene-local-root .micro-grid {
+        position: absolute;
+        inset: 0;
+        opacity: 0.2;
+        background-image:
+          linear-gradient(rgba(68, 214, 44, 0.1) 2px, rgba(68, 214, 44, 0) 2px),
+          linear-gradient(90deg, rgba(68, 214, 44, 0.1) 2px, rgba(68, 214, 44, 0) 2px);
+        background-size: 76px 76px;
+      }
+
+      #scene-local-root .hero-glow {
+        position: absolute;
+        left: 300px;
+        top: 100px;
+        width: 1320px;
+        height: 900px;
+        border-radius: 50%;
+        opacity: 0.23;
+        background: radial-gradient(circle, rgba(68, 214, 44, 0.5) 0%, rgba(31, 122, 18, 0.18) 38%, rgba(10, 12, 13, 0) 74%);
+        will-change: transform, opacity;
+      }
+
+      #scene-local-root .ghost-word {
+        position: absolute;
+        right: -28px;
+        bottom: -94px;
+        color: rgba(68, 214, 44, 0.12);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 330px;
+        font-weight: 700;
+        letter-spacing: -0.08em;
+      }
+
+      #scene-local-root .circuit {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        fill: #44d62c;
+        stroke: #44d62c;
+        stroke-width: 4;
+        opacity: 0.28;
+      }
+
+      #scene-local-root .circuit path {
+        fill: none;
+      }
+
+      #scene-local-root .scene-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        gap: 26px;
+        padding: 66px 112px 62px;
+      }
+
+      #scene-local-root .header-row,
+      #scene-local-root .closing-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #scene-local-root .eyebrow,
+      #scene-local-root .index {
+        margin: 0;
+        color: #9aa6ae;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+      }
+
+      #scene-local-root .index {
+        color: #6fe55b;
+      }
+
+      #scene-local-root h1 {
+        max-width: 1540px;
+        margin: 0;
+        color: #eafbe6;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 84px;
+        font-weight: 700;
+        line-height: 1.02;
+        letter-spacing: -0.045em;
+      }
+
+      #scene-local-root .benefit-stack {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        justify-content: center;
+        gap: 18px;
+      }
+
+      #scene-local-root .benefit-row {
+        display: grid;
+        min-height: 142px;
+        grid-template-columns: 112px 1fr 420px;
+        align-items: center;
+        gap: 34px;
+        padding: 18px 34px;
+        border: 3px solid #2e363c;
+        background: #131619;
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+        will-change: transform, opacity;
+      }
+
+      #scene-local-root .benefit-row:nth-child(2) {
+        border-color: #44d62c;
+        background: #181c20;
+      }
+
+      #scene-local-root .number-disc {
+        display: grid;
+        place-items: center;
+        width: 88px;
+        height: 88px;
+        border: 3px solid #44d62c;
+        border-radius: 50%;
+        color: #44d62c;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 30px;
+        font-weight: 700;
+        will-change: transform, opacity;
+      }
+
+      #scene-local-root .benefit-row strong {
+        color: #eafbe6;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 54px;
+        line-height: 1;
+        letter-spacing: -0.035em;
+      }
+
+      #scene-local-root .benefit-row:nth-child(2) strong {
+        color: #6fe55b;
+      }
+
+      #scene-local-root .state {
+        justify-self: end;
+        color: #9aa6ae;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+      }
+
+      #scene-local-root .closing-row {
+        min-height: 92px;
+        border-top: 3px solid #2e363c;
+        padding-top: 24px;
+      }
+
+      #scene-local-root .closing-row p {
+        max-width: 980px;
+        margin: 0;
+        color: #eafbe6;
+        font-size: 34px;
+        line-height: 1.25;
+      }
+
+      #scene-local-root .oss-badge {
+        display: flex;
+        align-items: center;
+        padding: 18px 24px;
+        border: 3px solid #44d62c;
+        color: #6fe55b;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        will-change: transform, opacity;
+      }
+
+      #scene-local-root .oss-badge i {
+        width: 14px;
+        height: 14px;
+        margin-right: 14px;
+        border-radius: 50%;
+        background: #44d62c;
+        box-shadow: 0 0 16px rgba(68, 214, 44, 0.7);
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const timeline = gsap.timeline({ paused: true });
+
+      timeline
+        .fromTo("#scene-local-glow", { opacity: 0, scale: 0.8 }, { opacity: 0.23, scale: 1, duration: 1.05, ease: "sine.out" }, 0)
+        .fromTo("#scene-local-ghost", { opacity: 0, x: 96 }, { opacity: 1, x: 0, duration: 0.9, ease: "power3.out" }, 0.04)
+        .fromTo("#scene-local-circuit", { opacity: 0, scaleX: 0.45 }, { opacity: 0.28, scaleX: 1, duration: 0.85, ease: "expo.out", transformOrigin: "center center" }, 0.08)
+        .fromTo("#scene-local-eyebrow", { opacity: 0, x: -46 }, { opacity: 1, x: 0, duration: 0.42, ease: "power3.out" }, 0.16)
+        .fromTo("#scene-local-index", { opacity: 0, x: 46 }, { opacity: 1, x: 0, duration: 0.42, ease: "power3.out" }, 0.16)
+        .fromTo("#scene-local-title", { opacity: 0, y: 52 }, { opacity: 1, y: 0, duration: 0.54, ease: "power4.out" }, 0.3)
+        .fromTo("#scene-local-row-1", { opacity: 0, x: -190 }, { opacity: 1, x: 0, duration: 0.58, ease: "power4.out" }, 0.58)
+        .fromTo("#scene-local-icon-1", { opacity: 0, scale: 0.35 }, { opacity: 1, scale: 1, duration: 0.45, ease: "expo.out" }, 0.82)
+        .fromTo("#scene-local-row-2", { opacity: 0, x: 190 }, { opacity: 1, x: 0, duration: 0.58, ease: "power4.out" }, 0.86)
+        .fromTo("#scene-local-icon-2", { opacity: 0, scale: 0.35 }, { opacity: 1, scale: 1, duration: 0.45, ease: "expo.out" }, 1.1)
+        .fromTo("#scene-local-row-3", { opacity: 0, x: -190 }, { opacity: 1, x: 0, duration: 0.58, ease: "power4.out" }, 1.14)
+        .fromTo("#scene-local-icon-3", { opacity: 0, scale: 0.35 }, { opacity: 1, scale: 1, duration: 0.45, ease: "expo.out" }, 1.38)
+        .fromTo("#scene-local-support", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.46, ease: "power3.out" }, 1.66)
+        .fromTo("#scene-local-oss", { opacity: 0, x: 54, scale: 0.92 }, { opacity: 1, x: 0, scale: 1, duration: 0.5, ease: "power3.out" }, 1.78)
+        .to("#scene-local-glow", { opacity: 0.3, scale: 1.035, duration: 1.3, ease: "sine.inOut" }, 2.15);
+
+      window.__timelines["scene-local-first"] = timeline;
+    </script>
+  </div>
+</template>

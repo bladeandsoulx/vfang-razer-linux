@@ -1,0 +1,15 @@
+{
+  "scene": "05-action",
+  "duration_s": 3.7,
+  "duration": 3.7,
+  "rules": ["spring-pop-entrance", "waterfall-entry", "ambient-glow-bloom"],
+  "entry": { "vector": "mark scales from 40% while CTA rises 82px", "from_rest": true },
+  "exit": { "vector": "content fades to black over 340ms", "still_moving": true },
+  "assertions": [
+    { "kind": "appearsBy", "selector": "#scene-action-line-1", "bySec": 1.15 },
+    { "kind": "appearsBy", "selector": "#scene-action-install", "bySec": 1.4 },
+    { "kind": "before", "a": "#scene-action-line-1", "b": "#scene-action-repo" },
+    { "kind": "staysInFrame", "selector": "#scene-action-install" },
+    { "kind": "keepsMoving", "withinSelector": "#scene-action-root", "maxStaticSec": 1.5 }
+  ]
+}

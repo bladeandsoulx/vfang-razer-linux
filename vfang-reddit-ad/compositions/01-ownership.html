@@ -1,0 +1,288 @@
+<template id="scene-ownership-template">
+  <div
+    id="scene-ownership-root"
+    data-composition-id="scene-ownership"
+    data-width="1920"
+    data-height="1080"
+    data-duration="3.2"
+  >
+    <div class="scene-fill">
+      <div class="micro-grid" data-layout-ignore></div>
+      <div id="scene-ownership-glow" class="hero-glow" data-layout-ignore></div>
+      <div id="scene-ownership-ghost" class="ghost-word" data-layout-ignore>LINUX</div>
+      <div id="scene-ownership-corner-a" class="corner corner-a" data-layout-ignore></div>
+      <div id="scene-ownership-corner-b" class="corner corner-b" data-layout-ignore></div>
+
+      <div class="scene-content" data-layout-allow-occlusion>
+        <div id="scene-ownership-rail" class="system-rail">
+          <span>VFANG // LOCAL CONTROL SYSTEM</span>
+          <span class="rail-status"><i></i> SYSTEM READY</span>
+        </div>
+
+        <div class="hero-layout">
+          <div class="mark-column">
+            <div class="mark-stage">
+              <img id="scene-ownership-mark" src="assets/vfang-icon.png" alt="" />
+            </div>
+            <div id="scene-ownership-model" class="model-tag">BLADE / LINUX</div>
+          </div>
+
+          <div class="message-column">
+            <p id="scene-ownership-eyebrow" class="eyebrow">RAZER BLADE CONTROL CENTER</p>
+            <h1 aria-label="Your Blade. Your Linux.">
+              <span id="scene-ownership-line-1">YOUR BLADE.</span>
+              <span id="scene-ownership-line-2" class="accent">YOUR LINUX.</span>
+            </h1>
+            <p id="scene-ownership-subline" class="subline">Control should follow your operating system.</p>
+          </div>
+        </div>
+
+        <div id="scene-ownership-footer" class="footer-rail">
+          <span>CONTROL // LOCAL</span>
+          <span>NO CLOUD REQUIRED</span>
+          <span>48 MODEL PROFILES</span>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      #scene-ownership-root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        color: #eafbe6;
+        font-family: "Inter", sans-serif;
+      }
+
+      #scene-ownership-root * {
+        box-sizing: border-box;
+      }
+
+      #scene-ownership-root .scene-fill {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        background-color: #0a0c0d;
+      }
+
+      #scene-ownership-root .micro-grid {
+        position: absolute;
+        inset: 0;
+        opacity: 0.24;
+        background-image:
+          linear-gradient(rgba(68, 214, 44, 0.1) 2px, rgba(68, 214, 44, 0) 2px),
+          linear-gradient(90deg, rgba(68, 214, 44, 0.1) 2px, rgba(68, 214, 44, 0) 2px);
+        background-size: 72px 72px;
+      }
+
+      #scene-ownership-root .hero-glow {
+        position: absolute;
+        left: -160px;
+        top: 150px;
+        width: 900px;
+        height: 900px;
+        border-radius: 50%;
+        opacity: 0.3;
+        background: radial-gradient(circle, rgba(68, 214, 44, 0.6) 0%, rgba(31, 122, 18, 0.26) 34%, rgba(10, 12, 13, 0) 72%);
+        will-change: transform, opacity;
+      }
+
+      #scene-ownership-root .ghost-word {
+        position: absolute;
+        right: -42px;
+        bottom: -86px;
+        color: rgba(68, 214, 44, 0.13);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 300px;
+        font-weight: 700;
+        letter-spacing: -0.07em;
+      }
+
+      #scene-ownership-root .corner {
+        position: absolute;
+        width: 92px;
+        height: 92px;
+        border-color: #44d62c;
+        border-style: solid;
+        opacity: 0.6;
+      }
+
+      #scene-ownership-root .corner-a {
+        top: 64px;
+        left: 64px;
+        border-width: 3px 0 0 3px;
+      }
+
+      #scene-ownership-root .corner-b {
+        right: 64px;
+        bottom: 64px;
+        border-width: 0 3px 3px 0;
+      }
+
+      #scene-ownership-root .scene-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        gap: 44px;
+        padding: 70px 100px 62px;
+      }
+
+      #scene-ownership-root .system-rail,
+      #scene-ownership-root .footer-rail {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-top: 3px solid #2e363c;
+        border-bottom: 3px solid #2e363c;
+        color: #9aa6ae;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+      }
+
+      #scene-ownership-root .system-rail {
+        height: 72px;
+        padding: 0 24px;
+      }
+
+      #scene-ownership-root .rail-status {
+        color: #6fe55b;
+      }
+
+      #scene-ownership-root .rail-status i {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        margin-right: 14px;
+        border-radius: 50%;
+        background: #44d62c;
+        box-shadow: 0 0 20px rgba(68, 214, 44, 0.8);
+      }
+
+      #scene-ownership-root .hero-layout {
+        display: grid;
+        flex: 1;
+        grid-template-columns: 470px 1fr;
+        align-items: center;
+        gap: 88px;
+      }
+
+      #scene-ownership-root .mark-column {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 28px;
+      }
+
+      #scene-ownership-root .mark-stage {
+        display: grid;
+        place-items: center;
+        width: 390px;
+        height: 470px;
+        border: 3px solid #2e363c;
+        background: #131619;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+      }
+
+      #scene-ownership-root .mark-stage img {
+        display: block;
+        width: 310px;
+        height: 310px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 34px rgba(68, 214, 44, 0.5));
+        will-change: transform, opacity;
+      }
+
+      #scene-ownership-root .model-tag {
+        color: #6fe55b;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+      }
+
+      #scene-ownership-root .message-column {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 26px;
+        min-width: 0;
+      }
+
+      #scene-ownership-root .eyebrow {
+        margin: 0;
+        color: #9aa6ae;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+      }
+
+      #scene-ownership-root h1 {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        max-width: 1120px;
+        margin: 0;
+        color: #eafbe6;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 132px;
+        font-weight: 700;
+        line-height: 0.98;
+        letter-spacing: -0.055em;
+      }
+
+      #scene-ownership-root h1 span {
+        display: block;
+        will-change: transform, opacity;
+      }
+
+      #scene-ownership-root h1 .accent {
+        color: #44d62c;
+      }
+
+      #scene-ownership-root .subline {
+        max-width: 930px;
+        margin: 0;
+        color: #eafbe6;
+        font-size: 38px;
+        font-weight: 400;
+        line-height: 1.25;
+      }
+
+      #scene-ownership-root .footer-rail {
+        min-height: 70px;
+        padding: 0 24px;
+        font-size: 21px;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const timeline = gsap.timeline({ paused: true });
+
+      timeline
+        .fromTo("#scene-ownership-glow", { opacity: 0, scale: 0.82 }, { opacity: 0.3, scale: 1, duration: 1.05, ease: "sine.out" }, 0)
+        .fromTo("#scene-ownership-ghost", { opacity: 0, x: 90 }, { opacity: 1, x: 0, duration: 1.1, ease: "power3.out" }, 0.08)
+        .fromTo("#scene-ownership-corner-a", { opacity: 0, x: -36, y: -36 }, { opacity: 0.6, x: 0, y: 0, duration: 0.55, ease: "power3.out" }, 0.08)
+        .fromTo("#scene-ownership-corner-b", { opacity: 0, x: 36, y: 36 }, { opacity: 0.6, x: 0, y: 0, duration: 0.55, ease: "power3.out" }, 0.14)
+        .fromTo("#scene-ownership-rail", { opacity: 0, scaleX: 0.55 }, { opacity: 1, scaleX: 1, duration: 0.55, ease: "expo.out", transformOrigin: "left center" }, 0.12)
+        .fromTo("#scene-ownership-mark", { opacity: 0, scale: 0.66, rotate: -8 }, { opacity: 1, scale: 1, rotate: 0, duration: 0.72, ease: "power4.out" }, 0.28)
+        .fromTo("#scene-ownership-model", { opacity: 0, y: 28 }, { opacity: 1, y: 0, duration: 0.46, ease: "power3.out" }, 0.72)
+        .fromTo("#scene-ownership-eyebrow", { opacity: 0, x: 58 }, { opacity: 1, x: 0, duration: 0.46, ease: "power3.out" }, 0.34)
+        .fromTo("#scene-ownership-line-1", { opacity: 0, y: 86 }, { opacity: 1, y: 0, duration: 0.58, ease: "power4.out" }, 0.48)
+        .fromTo("#scene-ownership-line-2", { opacity: 0, y: 86 }, { opacity: 1, y: 0, duration: 0.58, ease: "power4.out" }, 0.67)
+        .fromTo("#scene-ownership-subline", { opacity: 0, x: 52 }, { opacity: 1, x: 0, duration: 0.5, ease: "power3.out" }, 1.02)
+        .fromTo("#scene-ownership-footer", { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 1.2)
+        .to("#scene-ownership-glow", { opacity: 0.36, scale: 1.035, duration: 1.3, ease: "sine.inOut" }, 1.35);
+
+      window.__timelines["scene-ownership"] = timeline;
+    </script>
+  </div>
+</template>
