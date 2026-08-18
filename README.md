@@ -34,10 +34,7 @@ installation safely, and refuses downgrades.
 
 ## See VFang in action
 
-[![VFang 20-second intro video — silent preview loop](docs/screenshots/vfang-ad-preview.gif)](https://github.com/bladeandsoulx/vfang-razer-linux/blob/main/vfang-reddit-ad/renders/vfang-reddit-ad-voiceover.mp4)
-
-The preview loops without sound — **click it for the full 20-second video with
-voice-over**, or keep scrolling for screenshots.
+https://github.com/user-attachments/assets/0cb883c3-765c-49fe-90d1-4e54d942707c
 
 ![VFang live thermal dashboard for a Razer Blade laptop on Linux](docs/screenshots/dashboard.png)
 
