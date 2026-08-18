@@ -34,6 +34,11 @@ installation safely, and refuses downgrades.
 
 ## See VFang in action
 
+[![VFang 20-second intro video — silent preview loop](docs/screenshots/vfang-ad-preview.gif)](https://github.com/bladeandsoulx/vfang-razer-linux/blob/main/vfang-reddit-ad/renders/vfang-reddit-ad-voiceover.mp4)
+
+The preview loops without sound — **click it for the full 20-second video with
+voice-over**, or keep scrolling for screenshots.
+
 ![VFang live thermal dashboard for a Razer Blade laptop on Linux](docs/screenshots/dashboard.png)
 
 | Custom fan curves with thermal protection | Performance modes and power automation |
@@ -42,8 +47,8 @@ installation safely, and refuses downgrades.
 | Keyboard, logo, and display lighting | GPU mode and refresh-rate controls |
 | ![VFang Razer Blade RGB and display controls on Linux](docs/screenshots/lighting.png) | ![VFang Razer Blade GPU switching and refresh-rate controls on Linux](docs/screenshots/gpu-display.png) |
 
-_These screenshots use VFang's built-in hardware simulator. The real app has the
-same interface._
+_The video and screenshots use VFang's built-in hardware simulator. The real
+app has the same interface._
 
 ## What VFang can do
 
