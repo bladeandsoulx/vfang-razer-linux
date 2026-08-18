@@ -21,11 +21,13 @@ A 20-second landscape advertisement for Linux users who own Razer Blade laptops.
 - `assets/dashboard.png` — the real VFang simulated live dashboard for product proof.
 - `assets/performance.png` — the real VFang performance and automation interface for product proof.
 - `assets/fan-curve.png` — the real VFang safe fan-curve interface for product proof.
+- `assets/vfang-voiceover.wav` — the 20-second, 48 kHz stereo narration master.
 
 ## Customizations
 
 - Five scenes with mechanical transition overlays and large muted-autoplay copy.
-- Deliberate silence: no voiceover or required music, because the destination autoplays muted.
+- A restrained, confident tech-documentary voiceover reinforces each visual beat.
+- The on-screen copy remains complete on its own because Reddit can autoplay muted.
 
 ## Notes
 

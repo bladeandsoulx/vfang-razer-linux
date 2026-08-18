@@ -2,3 +2,4 @@
 {"id":"image_002","type":"image","path":"assets/fan-curve.png","source":"existing","description":"fan curve","provenance":{"provider":"local","adopted":true}}
 {"id":"image_003","type":"image","path":"assets/performance.png","source":"existing","description":"performance","provenance":{"provider":"local","adopted":true}}
 {"id":"image_004","type":"image","path":"assets/vfang-icon.png","source":"existing","description":"vfang icon","provenance":{"provider":"local","adopted":true}}
+{"id":"voice_001","type":"voice","path":"assets/vfang-voiceover.wav","source":"generated","description":"VFang Reddit ad voiceover","duration":20,"provenance":{"provider":"hyperframes-tts","engine":"kokoro-82m","voice":"am_michael"}}

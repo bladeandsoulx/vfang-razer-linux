@@ -15,6 +15,7 @@ mode: autonomous
 - poster: 1.8s
 - transition_in: signal-boot
 - scene: The fang mark powers on beside the ownership statement.
+- narration: "Your Blade. Your Linux."
 - rules: waterfall-entry, ambient-glow-bloom
 
 A precision instrument panel wakes from black. The fang mark locks into the left edge while `YOUR BLADE. YOUR LINUX.` assembles in a crisp vertical cascade. Micro-grid coordinates, a signal rail, and a restrained green halo make the frame feel engineered rather than decorative. The exit is covered by a green scan wipe.
@@ -27,6 +28,7 @@ A precision instrument panel wakes from black. The fang mark locks into the left
 - poster: 1.7s
 - transition_in: scan-wipe
 - scene: Synapse's Windows boundary faces VFang's Linux-native promise.
+- narration: "Synapse stops at Windows. VFang starts on Linux."
 - rules: split-tilt-cards, ambient-glow-bloom
 
 Two technical plates pivot inward like opposing pages: Synapse 4 on Windows at left, VFang built for Linux at right. The warning side is restrained amber and dim; the VFang side carries the bright signal. `SYNAPSE STOPS AT WINDOWS.` lands before `VFANG STARTS ON LINUX.` A mechanical shutter covers the handoff.
@@ -39,6 +41,7 @@ Two technical plates pivot inward like opposing pages: Synapse 4 on Windows at l
 - poster: 3.8s
 - transition_in: shutter
 - scene: Real VFang UI captures advance through telemetry, power, and safe fan control.
+- narration: "Take control of live telemetry, performance modes, and safe fan curves—right on your Razer Blade."
 - rules: scale-swap-transition, multi-phase-camera, ambient-glow-bloom
 
 The viewer moves toward a real VFang application window. Dashboard, performance, and fan-curve captures layer into the same framed monitor aperture, each incoming capture landing over the prior one without recoloring the pixels. `LIVE TELEMETRY`, `POWER MODES`, and `SAFE FAN CURVES` accumulate along a proof rail. Three full-frame green bars cover the next cut.
@@ -51,6 +54,7 @@ The viewer moves toward a real VFang application window. Dashboard, performance,
 - poster: 2.5s
 - transition_in: three-bar-cover
 - scene: Three large trust statements prove the local-first advantage.
+- narration: "No account. No cloud required. No ads. Just open-source control that works offline."
 - rules: waterfall-entry, spring-pop-entrance, ambient-glow-bloom
 
 Three numbered instrument rows lock in from alternating directions: `NO ACCOUNT`, `CONTROLS WORK OFFLINE`, `NO ADS`. A thin circuit trace connects them to an `OPEN SOURCE · GPL-2.0` seal. The supporting line holds long enough to read. A terminal cursor line expands to cover the transition.
@@ -63,6 +67,7 @@ Three numbered instrument rows lock in from alternating directions: `NO ACCOUNT`
 - poster: 2.3s
 - transition_in: terminal-reveal
 - scene: VFang closes on a strong ownership CTA and repository address.
+- narration: "VFang. Take back your Blade."
 - rules: spring-pop-entrance, waterfall-entry, ambient-glow-bloom
 
 The final fang mark settles beside the VFang wordmark. `TAKE BACK YOUR BLADE.` dominates the frame; a terminal-like bar states `COPY. PASTE. DONE.` and `One-command install`. The repository URL and `48 MODELS · OPEN SOURCE · LINUX` badges remain clear through the hold before a short final fade.

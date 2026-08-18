@@ -1,0 +1,5 @@
+Your Blade. Your Linux.
+Synapse stops at Windows. VFang starts on Linux.
+Take control of live telemetry, performance modes, and safe fan curves—right on your Razer Blade.
+No account. No cloud required. No ads. Just open-source control that works offline.
+VFang. Take back your Blade.
