@@ -1,7 +1,7 @@
 {
   "name": "fang-ui",
   "private": true,
-  "version": "0.9.9",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +16,7 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.1.1",
     "@tauri-apps/cli": "^2.5.0",
+    "esbuild": "^0.25.12",
     "svelte": "^5.56.5",
     "vite": "^6.4.3"
   }

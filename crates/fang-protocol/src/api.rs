@@ -312,6 +312,21 @@ pub struct Telemetry {
     /// GPU power draw in watts (NVML), when the GPU is awake.
     #[serde(default)]
     pub gpu_power_w: Option<f32>,
+    /// The latest runtime-PM snapshot reported the discrete GPU as suspended.
+    /// This observed state is separate from whether query policy permits NVML.
+    #[serde(default)]
+    pub gpu_asleep: bool,
+    /// Share of time the integrated GPU's render engine was awake, 0..=100,
+    /// when readable.
+    #[serde(default)]
+    pub igpu_active_pct: Option<f32>,
+    /// RAPL uncore power in watts, exposed as an iGPU proxy where available.
+    /// The uncore domain can include components beyond the integrated GPU.
+    #[serde(default)]
+    pub igpu_power_w: Option<f32>,
+    /// Integrated-GPU current frequency in MHz, when readable.
+    #[serde(default)]
+    pub igpu_freq_mhz: Option<u32>,
     /// True on AC, false on battery, None when no AC adapter is exposed
     /// (desktop, or unreadable).
     #[serde(default)]
@@ -411,6 +426,10 @@ mod tests {
             gpu_temp_c: None,
             cpu_power_w: Some(28.4),
             gpu_power_w: None,
+            gpu_asleep: true,
+            igpu_active_pct: Some(12.5),
+            igpu_power_w: Some(2.1),
+            igpu_freq_mhz: Some(1_250),
             on_ac: Some(true),
             fan_rpm: vec![2300, 2280],
             fan_target_rpm: Some(2300),
@@ -421,6 +440,30 @@ mod tests {
         });
         let s = serde_json::to_string(&e).unwrap();
         assert!(s.starts_with(r#"{"event":"telemetry","data":{"#), "{s}");
+    }
+
+    #[test]
+    fn legacy_telemetry_uses_defaults_for_added_fields() {
+        let telemetry: Telemetry = serde_json::from_str(
+            r#"{"cpu_temp_c":61.5,"gpu_temp_c":null,"fan_rpm":[2300,2280],"ts_ms":12}"#,
+        )
+        .unwrap();
+
+        assert_eq!(telemetry.cpu_temp_c, Some(61.5));
+        assert_eq!(telemetry.gpu_temp_c, None);
+        assert!(!telemetry.gpu_asleep);
+        assert_eq!(telemetry.cpu_power_w, None);
+        assert_eq!(telemetry.gpu_power_w, None);
+        assert_eq!(telemetry.igpu_active_pct, None);
+        assert_eq!(telemetry.igpu_power_w, None);
+        assert_eq!(telemetry.igpu_freq_mhz, None);
+        assert_eq!(telemetry.on_ac, None);
+        assert_eq!(telemetry.fan_rpm, vec![2300, 2280]);
+
+        let wire = serde_json::to_value(telemetry).unwrap();
+        assert_eq!(wire["gpu_asleep"], serde_json::Value::Bool(false));
+        assert!(wire["igpu_power_w"].is_null());
+        assert!(wire["igpu_freq_mhz"].is_null());
     }
 
     #[test]

@@ -12,11 +12,46 @@
   };
 
   const watts = (w) => (w == null ? null : `${w.toFixed(1)} W`);
+  const joined = (...parts) => parts.filter((p) => p != null).join(' · ') || null;
+
+  // Hybrid laptops also report the integrated GPU; older daemons omit it.
+  $: hasIgpu = $telemetry?.igpu_active_pct != null || $telemetry?.igpu_power_w != null || $telemetry?.igpu_freq_mhz != null;
+  $: igpuSub = joined(
+    $telemetry?.igpu_power_w == null ? null : `Uncore power (iGPU proxy): ${watts($telemetry.igpu_power_w)}`,
+    $telemetry?.igpu_freq_mhz == null ? null : `${$telemetry.igpu_freq_mhz} MHz`
+  );
 </script>
 
-<div class="grid">
+<div class="grid" class:four={hasIgpu}>
   <Gauge value={$telemetry?.cpu_temp_c} label="CPU package" sub={watts($telemetry?.cpu_power_w)} />
-  <Gauge value={$telemetry?.gpu_temp_c} label="GPU core" sub={watts($telemetry?.gpu_power_w)} />
+  <Gauge
+    value={$telemetry?.gpu_temp_c}
+    label={hasIgpu ? 'dGPU core' : 'GPU core'}
+    sub={$telemetry?.gpu_asleep ? 'asleep' : watts($telemetry?.gpu_power_w)}
+  />
+  {#if hasIgpu}
+    {#if $telemetry?.igpu_active_pct != null}
+      <Gauge
+        value={$telemetry.igpu_active_pct}
+        label="iGPU awake"
+        unit="%"
+        min={0}
+        max={100}
+        warn={101}
+        danger={101}
+        sub={igpuSub}
+      />
+    {:else}
+      <div class="igpu card rise">
+        <span class="card-label">{$telemetry?.igpu_power_w != null ? 'Uncore power (iGPU proxy)' : 'iGPU frequency'}</span>
+        <span class="big mono">{$telemetry?.igpu_power_w != null ? watts($telemetry.igpu_power_w) : `${$telemetry.igpu_freq_mhz} MHz`}</span>
+        <span class="unavailable">Activity unavailable</span>
+        {#if $telemetry?.igpu_power_w != null && $telemetry?.igpu_freq_mhz != null}
+          <span class="unavailable mono">{$telemetry.igpu_freq_mhz} MHz</span>
+        {/if}
+      </div>
+    {/if}
+  {/if}
 
   <div class="fan card rise" style="animation-delay:80ms">
     <FanSpinner rpm={$avgRpm ?? 0} size={124} />
@@ -62,6 +97,25 @@
     gap: 14px;
   }
 
+  .grid.four {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .igpu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 18px 16px;
+    text-align: center;
+  }
+
+  .unavailable {
+    color: var(--ink-dim);
+    font-size: 12px;
+  }
+
   .fan {
     display: flex;
     flex-direction: column;
@@ -101,6 +155,10 @@
 
   .wide2 {
     grid-column: 3;
+  }
+
+  .four .wide2 {
+    grid-column: 3 / span 2;
   }
 
   .modebar {

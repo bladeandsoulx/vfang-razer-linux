@@ -4,6 +4,17 @@ set -euo pipefail
 PACKAGE_DIR="${1:?usage: verify.sh PACKAGE_DIRECTORY TEST_BUILDER}"
 TEST_BUILDER="${2:?usage: verify.sh PACKAGE_DIRECTORY TEST_BUILDER}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+# This lifecycle check removes both packages at the end. Refuse to run over a
+# developer's existing install; CI invokes it inside disposable containers.
+for package in fang fangd; do
+  if pacman -Q -- "$package" >/dev/null 2>&1; then
+    printf 'refusing to run with existing %s package state; use a disposable container\n' \
+      "$package" >&2
+    exit 1
+  fi
+done
+
 TMP="$(mktemp -d)"
 chmod 0755 "$TMP"
 trap 'rm -rf -- "$TMP"' EXIT

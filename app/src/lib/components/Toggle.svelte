@@ -1,7 +1,30 @@
 <script>
+  import { createEventDispatcher, tick } from 'svelte';
+  import { captureAndRestoreCheckbox, restoreCheckboxFocus } from '../controlled-checkbox.js';
+
   export let checked = false;
+  export let disabled = false;
   export let label = '';
   export let hint = '';
+
+  const dispatch = createEventDispatcher();
+  let input;
+  let restoreFocus = false;
+  let wasDisabled = false;
+
+  $: if (disabled) wasDisabled = true;
+  $: if (!disabled && wasDisabled) {
+    wasDisabled = false;
+    const wasFocused = restoreFocus;
+    restoreFocus = false;
+    void tick().then(() => restoreCheckboxFocus(input, wasFocused));
+  }
+
+  function change(event) {
+    restoreFocus = event.currentTarget.ownerDocument.activeElement === event.currentTarget;
+    const requested = captureAndRestoreCheckbox(event, checked);
+    dispatch('change', { checked: requested });
+  }
 </script>
 
 <label class="row">
@@ -9,12 +32,13 @@
     <span class="label">{label}</span>
     {#if hint}<span class="hint">{hint}</span>{/if}
   </span>
-  <input type="checkbox" bind:checked on:change />
+  <input bind:this={input} type="checkbox" {checked} {disabled} on:change={change} />
   <span class="pill"><span class="knob"></span></span>
 </label>
 
 <style>
   .row {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 16px;
@@ -40,7 +64,29 @@
   }
 
   input {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  input:focus-visible + .pill {
+    outline: 2px solid var(--green-soft);
+    outline-offset: 3px;
+  }
+
+  input:disabled ~ .pill {
+    opacity: 0.55;
+  }
+
+  .row:has(input:disabled) {
+    cursor: default;
   }
 
   .pill {

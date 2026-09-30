@@ -2,6 +2,66 @@
   // Mirrors CHANGELOG.md, condensed for the panel. Newest first.
   const RELEASES = [
     {
+      version: '1.0.0',
+      date: '2026-09-30',
+      title: 'Reliability and hardware telemetry',
+      groups: [
+        {
+          kind: 'Added',
+          items: [
+            'Blade 16 (2026), USB PID 1532:02e0, joins the model table from PR #10; its capabilities follow the contributor hardware report.',
+            'Optional iGPU telemetry and dashboard cards from PR #11, plus Windows build/test CI and contributor instructions.',
+            'Custom profiles can be selected for AC and battery power automation using your saved CPU and GPU power levels.',
+            'Fallible packet constructors reject oversized arguments without panicking and preserve the existing hardware wire encoding.'
+          ]
+        },
+        {
+          kind: 'Fixed',
+          items: [
+            'The shared iGPU reading type no longer depends on a Linux-only module, restoring Windows and macOS mock-backend compilation.',
+            'GPU sleep reporting reflects an observed suspended runtime state; skipping a GPU query no longer incorrectly labels an active GPU asleep.',
+            'GPU commands reject CPU-only Boost levels; stale GPU Boost preferences normalize to High. Missing daemon option values fail before hardware initialization.',
+            'Extreme or inconsistent external-monitor brightness readings are handled safely.',
+            'Late startup snapshots cannot overwrite newer confirmed state. Independent startup queries continue after failures and offer Retry.',
+            'Hardware controls show pending states and errors, prevent overlapping saves and lock fan-curve editing during Apply. Battery optimizer failures no longer leave a misleading local ON toggle.',
+            'Toggles retain keyboard focus, navigation follows browser history, and release-version inputs are validated before files are written.',
+            'Keyboard-operated toggles recover focus after a pending save temporarily disables them, without taking focus from another control.',
+            'Linux display helpers bound output and include inherited pipes in their deadline. Internal-panel brightness handles large sysfs ranges safely.',
+            'Source installation finishes both builds before installing the package pair; package build outputs preserve existing artifacts.'
+          ]
+        },
+        {
+          kind: 'Changed',
+          items: [
+            'Removed real Xe activity/frequency reads that can wake hardware. Unavailable readings stay absent; mock activity and frequency remain supported.',
+            'RAPL readings are labeled Uncore power (iGPU proxy), with Activity unavailable when needed. Older telemetry retains the existing dashboard layout.',
+            'Documentation clarifies OLED/kernel guidance and which checks need Linux or physical hardware.',
+            'Published GitHub release notes include the dated changelog and its known limitations.'
+          ]
+        },
+        {
+          kind: 'Security',
+          items: [
+            'Daemon request sizes, client counts and waits are bounded; healthy telemetry subscriptions and lag recovery are preserved.',
+            'Daemon helper output and inherited-pipe waits are bounded, installer manifest filenames are allowlisted, and lifecycle verifiers protect existing installations.',
+            'Compatible dependency updates clear the checked npm audit.',
+            'The upstream GLib string-iterator crash fix is backported for GTK compatibility and covered by an optimized regression test.'
+          ]
+        },
+        {
+          kind: 'Notes',
+          items: [
+            'Linux native builds and automated regression checks passed on Zorin OS 18.1 (Ubuntu 24.04 base). The 0.9.9-to-1.0.0 test-package upgrade preserved settings and the native Wayland app connected. Browser and native mock interactions passed; physical GPU/fan/battery/lighting validation remain pending.',
+            'Issue #7: static RGB packet checks passed; the modified Blade lighting problem remains unconfirmed on hardware.',
+            'Issue #8: confirmed battery settings survived fresh screen renders and a mock restart; the affected firmware and physical charge limit still need confirmation.',
+            'GLib retains its compatible upstream version, so version-only scans may still flag the GLib advisory despite the source backport. Other transitive maintenance advisories remain.',
+            'AC unplug/replug and suspend/resume checks still need user confirmation. TDP sliders are not included; capability and safe-limit research is separate.',
+            'Package installation does not guarantee atomic rollback; keep the previous matching app/daemon pair available.'
+          ]
+        }
+      ]
+    },
+    {
       version: '0.9.9',
       date: '2026-08-08',
       title: 'Arch-family packages',
@@ -435,7 +495,8 @@
     Changed: 'chg',
     Removed: 'remove',
     Credits: 'cred',
-    Security: 'security'
+    Security: 'security',
+    Notes: 'chg'
   };
 </script>
 

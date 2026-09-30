@@ -6,6 +6,7 @@ export const telemetry = writable(null);
 export const uiSettings = writable({ autostart: false, close_to_tray: true });
 export const display = writable(null);
 export const panel = writable(null);
+export const bridgeErrors = writable([]);
 export const versionInfo = writable({
   app_version: '',
   app_api_version: 2,

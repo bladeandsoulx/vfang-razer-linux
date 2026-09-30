@@ -22,6 +22,25 @@ pub const REPORT_LEN: usize = 91;
 const ARGS_LEN: usize = 80;
 const TRANSACTION_ID: u8 = 0x1F;
 
+/// A caller supplied more bytes than the packet's argument area can hold.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArgumentError {
+    pub actual: usize,
+    pub maximum: usize,
+}
+
+impl std::fmt::Display for ArgumentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "argument length {} exceeds {} bytes",
+            self.actual, self.maximum
+        )
+    }
+}
+
+impl std::error::Error for ArgumentError {}
+
 /// Why a feature report could not be accepted as a response.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ReportError {
@@ -135,18 +154,32 @@ pub struct Report {
 }
 
 impl Report {
+    /// Construct a report for a known, fixed-size payload.
+    ///
+    /// Panics if `args` exceeds 80 bytes. Use [`Self::try_new`] when the
+    /// payload length comes from an external caller.
     pub fn new(command_class: u8, command_id: u8, args: &[u8]) -> Self {
-        debug_assert!(args.len() <= ARGS_LEN);
+        Self::try_new(command_class, command_id, args)
+            .expect("report arguments must fit in 80 bytes")
+    }
+
+    pub fn try_new(command_class: u8, command_id: u8, args: &[u8]) -> Result<Self, ArgumentError> {
+        if args.len() > ARGS_LEN {
+            return Err(ArgumentError {
+                actual: args.len(),
+                maximum: ARGS_LEN,
+            });
+        }
         let mut a = [0u8; ARGS_LEN];
         a[..args.len()].copy_from_slice(args);
-        Report {
+        Ok(Report {
             status: status::NEW,
             transaction_id: TRANSACTION_ID,
             data_size: args.len() as u8,
             command_class,
             command_id,
             args: a,
-        }
+        })
     }
 
     /// Serialize to the 91-byte buffer passed to `send_feature_report`.
@@ -323,12 +356,23 @@ pub fn set_logo_effect(effect: u8) -> Report {
 
 /// Keyboard hardware effect. The reference implementation always declares
 /// the full 80-byte args payload for this command, so mirror that.
+/// Panics for more than 79 parameter bytes; [`try_set_kbd_effect`] accepts
+/// variable-length input without panicking.
 pub fn set_kbd_effect(effect_id: u8, params: &[u8]) -> Report {
-    debug_assert!(params.len() < ARGS_LEN);
+    try_set_kbd_effect(effect_id, params).expect("keyboard effect parameters must fit in 79 bytes")
+}
+
+pub fn try_set_kbd_effect(effect_id: u8, params: &[u8]) -> Result<Report, ArgumentError> {
+    if params.len() >= ARGS_LEN {
+        return Err(ArgumentError {
+            actual: params.len(),
+            maximum: ARGS_LEN - 1,
+        });
+    }
     let mut args = [0u8; ARGS_LEN];
     args[0] = effect_id;
     args[1..1 + params.len()].copy_from_slice(params);
-    Report::new(0x03, 0x0a, &args)
+    Report::try_new(0x03, 0x0a, &args)
 }
 
 // ---- EC commands (class 0x07: battery) --------------------------------------
@@ -347,6 +391,41 @@ pub fn get_bho() -> Report {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fallible_constructors_reject_oversized_arguments() {
+        assert_eq!(
+            Report::try_new(0x03, 0x0a, &[0; ARGS_LEN + 1]),
+            Err(ArgumentError {
+                actual: ARGS_LEN + 1,
+                maximum: ARGS_LEN
+            })
+        );
+        assert!(Report::try_new(0x03, 0x0a, &[0; ARGS_LEN]).is_ok());
+        assert_eq!(
+            try_set_kbd_effect(kbd_effect::STATIC, &[0; ARGS_LEN]),
+            Err(ArgumentError {
+                actual: ARGS_LEN,
+                maximum: ARGS_LEN - 1
+            })
+        );
+        assert!(try_set_kbd_effect(kbd_effect::STATIC, &[0; ARGS_LEN - 1]).is_ok());
+    }
+
+    #[test]
+    fn static_colors_keep_the_reference_wire_encoding() {
+        // Same Razer-Control encoding as lighting_packet_bytes: 03/0a,
+        // effect 06, transaction 1f and an 80-byte declared payload.
+        for rgb in [[255, 0, 0], [0, 255, 0], [0, 0, 255], [120, 255, 140]] {
+            let report = try_set_kbd_effect(kbd_effect::STATIC, &rgb).unwrap();
+            let wire = report.to_feature_report();
+            assert_eq!(&wire[6..10], &[80, 0x03, 0x0a, 0x06]);
+            assert_eq!(&wire[10..13], &rgb);
+            assert_eq!(wire[2], 0x1f);
+            assert_eq!(Report::from_feature_report(&wire).unwrap(), report);
+            assert_eq!(set_kbd_effect(kbd_effect::STATIC, &rgb), report);
+        }
+    }
 
     #[test]
     fn power_mode_packet_bytes() {

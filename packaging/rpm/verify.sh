@@ -6,6 +6,16 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+# This lifecycle check removes both packages at the end. Refuse to run over a
+# developer's existing install; CI invokes it inside disposable containers.
+for package in fang fangd; do
+  if rpm -q "$package" >/dev/null 2>&1; then
+    printf 'refusing to run with existing %s package state; use a disposable container\n' \
+      "$package" >&2
+    exit 1
+  fi
+done
+
 mapfile -t packages < <(find "$RPM_DIR" -maxdepth 1 -type f -name '*.rpm' -print | sort)
 [[ "${#packages[@]}" -eq 2 ]] || {
   printf 'expected two RPMs, found %s\n' "${#packages[@]}" >&2

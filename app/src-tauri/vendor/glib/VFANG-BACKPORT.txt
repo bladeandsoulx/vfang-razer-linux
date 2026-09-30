@@ -1,0 +1,38 @@
+GLib 0.18.5 — VFang compatibility/security backport
+
+Upstream source: crates.io glib 0.18.5
+Archive: https://static.crates.io/crates/glib/glib-0.18.5.crate
+Archive SHA-256:
+233daaf6e83ae6a12a52055f568f9d7cf4671dabb78ff9560ab6da230ce00ee5
+Original COPYRIGHT and MIT LICENSE are retained.
+
+The only change to upstream source is the two-line out-pointer mutability
+correction in src/variant_iter.rs. It is the exact fix in gtk-rs PR #1343:
+https://github.com/gtk-rs/gtk-rs-core/pull/1343
+Merge commit: 05dff0ee696f9bcd8617cd48c4b812d046d440cb
+Advisory: https://rustsec.org/advisories/RUSTSEC-2024-0429.html
+
+VariantStrIter::impl_get now declares a mutable pointer and passes &mut p to
+g_variant_get_child. Previously C wrote through an immutable Rust reference,
+which is undefined behavior and can produce a null-pointer crash in optimized
+builds. The binding API and dependency versions are unchanged.
+
+The Tauri manifest patches crates.io glib to this local source. GTK, GIO,
+WebKitGTK and other dependencies resolve to this same patched crate; replacing
+only VFang's direct GLib usage would not fix their binding implementation.
+
+The optimized regression in ../../vendor-tests/glib-regression tests borrowed
+string-array iteration through next, next_back, nth, nth_back and last,
+including Unicode and an empty string. It requires only GLib development
+libraries and opens no window. Linux CI runs it separately from Tauri tests.
+
+The upstream package version stays 0.18.5 for compatibility. Version-only
+advisory scanners may still flag RUSTSEC-2024-0429; validate this source patch
+and regression instead of representing the upstream version as fixed or
+suppressing all GLib advisories. Transitive maintenance warnings remain.
+
+When upgrading GTK/Tauri, check whether a compatible fixed upstream binding
+can replace this vendor copy. Keep this backport and its optimized regression
+until the entire GTK dependency graph uses a fixed binding. Do not modify
+generated upstream bindings or broaden this patch without an upstream source
+reference and focused validation.

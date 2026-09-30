@@ -5,11 +5,13 @@
 //! Names such as `AC`, `ADP1`, and `ucsi-source-psy-*` are driver-specific, so
 //! detection uses the kernel's type values and aggregates every adapter.
 
+#[cfg(any(target_os = "linux", test))]
 use std::path::Path;
 
 /// Kernel `power_supply_type_text` values that represent an external source.
 /// `USB_TYPE_C` is accepted as a compatibility alias used by some out-of-tree
 /// drivers; upstream kernels expose that type as `USB_C`.
+#[cfg(any(target_os = "linux", test))]
 fn is_external_supply(kind: &str) -> bool {
     matches!(
         kind,
@@ -27,6 +29,7 @@ fn is_external_supply(kind: &str) -> bool {
     )
 }
 
+#[cfg(any(target_os = "linux", test))]
 fn parse_online(value: &str) -> Option<bool> {
     match value.trim() {
         "1" => Some(true),
@@ -35,7 +38,7 @@ fn parse_online(value: &str) -> Option<bool> {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", test))]
 fn on_ac_at(root: &Path) -> Option<bool> {
     let entries = std::fs::read_dir(root).ok()?;
     let mut saw_offline = false;
@@ -77,7 +80,7 @@ pub fn on_ac() -> Option<bool> {
     }
 }
 
-#[cfg(all(test, target_os = "linux"))]
+#[cfg(test)]
 mod tests {
     use super::on_ac_at;
     use std::path::{Path, PathBuf};

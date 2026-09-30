@@ -8,6 +8,14 @@ OUTPUT="${1:-$ROOT/target/arch-dist}"
   echo 'run the Arch package build as an unprivileged user' >&2
   exit 1
 }
+mkdir -p "$OUTPUT"
+require_empty_output() {
+  if [[ -n $(find "$OUTPUT" -maxdepth 1 -name '*.pkg.tar.*' -print -quit) ]]; then
+    echo "package output directory already contains Pacman artifacts; choose an empty directory: $OUTPUT" >&2
+    return 1
+  fi
+}
+require_empty_output
 
 for command in cargo node npm makepkg bsdtar; do
   command -v "$command" >/dev/null || {
@@ -53,7 +61,6 @@ mapfile -t built < <(find "$PKGDEST" -maxdepth 1 -type f -name '*.pkg.tar.zst' -
   exit 1
 }
 
-find "$OUTPUT" -maxdepth 1 -type f -name 'fang*.pkg.tar.zst' -delete
 declare -A seen=()
 for package in "${built[@]}"; do
   metadata="$(bsdtar -xOf "$package" .PKGINFO)"
@@ -67,8 +74,11 @@ for package in "${built[@]}"; do
     exit 1
   }
   seen[$name]=1
-  install -pm0644 "$package" "$OUTPUT/"
 done
 [[ -n ${seen[fang]+present} && -n ${seen[fangd]+present} ]]
+require_empty_output
+for package in "${built[@]}"; do
+  install -pm0644 "$package" "$OUTPUT/"
+done
 printf 'Pacman artifacts:\n'
 find "$OUTPUT" -maxdepth 1 -type f -name '*.pkg.tar.zst' -printf '%f\n' | sort

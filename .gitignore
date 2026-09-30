@@ -4,5 +4,8 @@
 app/node_modules
 app/dist
 app/src-tauri/target
+app/src-tauri/vendor-tests/*/target
 app/src-tauri/gen
 *.log
+__pycache__/
+*.py[cod]

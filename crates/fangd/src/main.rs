@@ -10,17 +10,20 @@ mod state;
 
 use crate::core::Core;
 use crate::state::AppliedState;
+use std::iter::Peekable;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, OwnedSemaphorePermit, Semaphore};
 
 const DEFAULT_TCP: &str = "127.0.0.1:7331";
+const MAX_CLIENT_CONNECTIONS: usize = 32;
 #[cfg(unix)]
 const DEFAULT_SOCKET: &str = "/run/fangd.sock";
 #[cfg(unix)]
 const HARDWARE_LOCK: &str = "/run/fangd.lock";
 
+#[derive(Debug)]
 struct Args {
     mock: bool,
     restore_auto: bool,
@@ -30,7 +33,11 @@ struct Args {
     state: Option<PathBuf>,
 }
 
-fn parse_args() -> Args {
+fn parse_args() -> Result<Args, String> {
+    parse_args_from(std::env::args().skip(1))
+}
+
+fn parse_args_from(arguments: impl IntoIterator<Item = String>) -> Result<Args, String> {
     let mut args = Args {
         mock: std::env::var("FANGD_MOCK")
             .map(|v| v == "1")
@@ -40,14 +47,14 @@ fn parse_args() -> Args {
         socket: None,
         state: None,
     };
-    let mut it = std::env::args().skip(1);
+    let mut it = arguments.into_iter().peekable();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--mock" => args.mock = true,
             "--restore-auto" => args.restore_auto = true,
-            "--tcp" => args.tcp = it.next(),
-            "--socket" => args.socket = it.next().map(PathBuf::from),
-            "--state" => args.state = it.next().map(PathBuf::from),
+            "--tcp" => args.tcp = Some(required_value(&mut it, "--tcp")?),
+            "--socket" => args.socket = Some(PathBuf::from(required_value(&mut it, "--socket")?)),
+            "--state" => args.state = Some(PathBuf::from(required_value(&mut it, "--state")?)),
             "--version" | "-V" => {
                 println!("fangd {}", env!("CARGO_PKG_VERSION"));
                 std::process::exit(0);
@@ -72,7 +79,19 @@ fn parse_args() -> Args {
             }
         }
     }
-    args
+    Ok(args)
+}
+
+fn required_value<I>(args: &mut Peekable<I>, option: &str) -> Result<String, String>
+where
+    I: Iterator<Item = String>,
+{
+    match args.peek() {
+        Some(value) if !value.starts_with("--") => args
+            .next()
+            .ok_or_else(|| format!("{option} requires a value")),
+        _ => Err(format!("{option} requires a value")),
+    }
 }
 
 #[cfg(unix)]
@@ -251,7 +270,13 @@ fn prepare_unix_socket(
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    let args = parse_args();
+    let args = match parse_args() {
+        Ok(args) => args,
+        Err(e) => {
+            eprintln!("{e}\ntry --help");
+            std::process::exit(2);
+        }
+    };
     if let Some(addr) = args.tcp.as_deref() {
         if let Err(e) = validate_tcp(addr, args.mock) {
             eprintln!("refusing --tcp: {e}");
@@ -329,6 +354,7 @@ async fn main() {
         peripherals.clone(),
         bus.clone(),
     ));
+    let connection_slots = Arc::new(Semaphore::new(MAX_CLIENT_CONNECTIONS));
 
     #[cfg(unix)]
     if let Some((path, listener, _socket_guard)) = unix_server {
@@ -339,12 +365,14 @@ async fn main() {
             tokio::select! {
                 accepted = listener.accept() => {
                     let Ok((stream, _)) = accepted else { continue };
-                    tokio::spawn(server::handle_conn(
-                        stream,
-                        Arc::clone(&core),
-                        peripherals.clone(),
-                        bus.clone(),
-                    ));
+                    let Some(permit) = reserve_connection(&connection_slots) else { continue };
+                    let core = Arc::clone(&core);
+                    let peripherals = peripherals.clone();
+                    let bus = bus.clone();
+                    tokio::spawn(async move {
+                        let _permit = permit;
+                        server::handle_conn(stream, core, peripherals, bus).await;
+                    });
                 }
                 _ = &mut shutdown => break,
             }
@@ -366,12 +394,14 @@ async fn main() {
         tokio::select! {
             accepted = listener.accept() => {
                 let Ok((stream, _)) = accepted else { continue };
-                tokio::spawn(server::handle_conn(
-                    stream,
-                    Arc::clone(&core),
-                    peripherals.clone(),
-                    bus.clone(),
-                ));
+                let Some(permit) = reserve_connection(&connection_slots) else { continue };
+                let core = Arc::clone(&core);
+                let peripherals = peripherals.clone();
+                let bus = bus.clone();
+                tokio::spawn(async move {
+                    let _permit = permit;
+                    server::handle_conn(stream, core, peripherals, bus).await;
+                });
             }
             _ = &mut shutdown => break,
         }
@@ -379,6 +409,10 @@ async fn main() {
     telemetry_task.abort();
     ddc_rescan_task.abort();
     restore_auto_before_exit(&core).await;
+}
+
+fn reserve_connection(slots: &Arc<Semaphore>) -> Option<OwnedSemaphorePermit> {
+    Arc::clone(slots).try_acquire_owned().ok()
 }
 
 async fn restore_auto_before_exit(core: &server::SharedCore) {
@@ -456,9 +490,11 @@ fn fang_gid() -> Option<u32> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_tcp;
+    use super::{parse_args_from, reserve_connection, validate_tcp, MAX_CLIENT_CONNECTIONS};
     #[cfg(unix)]
     use super::{prepare_unix_socket, InstanceLock};
+    use std::sync::Arc;
+    use tokio::sync::Semaphore;
 
     #[test]
     fn tcp_is_mock_only_and_loopback_only() {
@@ -468,6 +504,33 @@ mod tests {
         assert!(validate_tcp("0.0.0.0:7331", true).is_err());
         assert!(validate_tcp("192.168.1.5:7331", true).is_err());
         assert!(validate_tcp("localhost:7331", true).is_err());
+    }
+
+    #[test]
+    fn missing_option_values_are_rejected_before_startup() {
+        for option in ["--tcp", "--socket", "--state"] {
+            let error = parse_args_from([option.to_string()])
+                .expect_err("an option without its required value must fail parsing");
+            assert!(error.contains(option), "{error}");
+        }
+    }
+
+    #[test]
+    fn next_option_is_not_consumed_as_a_value() {
+        let error = parse_args_from(["--tcp".to_string(), "--mock".to_string()])
+            .expect_err("--mock must not be consumed as the TCP address");
+        assert!(error.contains("--tcp"), "{error}");
+    }
+
+    #[test]
+    fn connection_pool_rejects_clients_above_the_limit() {
+        let slots = Arc::new(Semaphore::new(MAX_CLIENT_CONNECTIONS));
+        let permits: Vec<_> = (0..MAX_CLIENT_CONNECTIONS)
+            .map(|_| reserve_connection(&slots).expect("slot should be available"))
+            .collect();
+        assert!(reserve_connection(&slots).is_none());
+        drop(permits.into_iter().next());
+        assert!(reserve_connection(&slots).is_some());
     }
 
     #[cfg(unix)]

@@ -9,50 +9,110 @@ import {
   status,
   telemetry,
   uiSettings,
+  bridgeErrors,
   versionInfo
 } from './stores.js';
 import { createUiSettingsCommitter } from './ui-settings.js';
+import {
+  createSnapshotRevisionGuard,
+  loadAndPublishBridgeSnapshot
+} from './bridge-init.js';
 
 export const inTauri =
   typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
-let invoke = null;
+let invoke = inTauri
+  ? async () => {
+      throw new Error('Tauri bridge is unavailable; retry initialization');
+    }
+  : null;
+const eventListeners = new Map();
+const snapshotRevisions = createSnapshotRevisionGuard();
 const uiSettingsCommitter = createUiSettingsCommitter(
   { autostart: false, close_to_tray: true },
-  (settings) => uiSettings.set(settings)
+  (settings) => publishLocalState('uiSettings', uiSettings, settings)
 );
 
 export function initBridge() {
-  if (inTauri) initTauri();
+  if (inTauri) void initTauri();
   else initSim();
 }
 
-async function initTauri() {
-  const core = await import('@tauri-apps/api/core');
-  const { listen } = await import('@tauri-apps/api/event');
-  invoke = core.invoke;
+export function retryBridgeInit() {
+  if (inTauri) return initTauri();
+}
 
-  await listen('fang://connected', (e) => connected.set(e.payload));
-  await listen('fang://compatibility', (e) => versionInfo.set(e.payload));
-  await listen('fang://status', (e) => status.set(e.payload));
-  await listen('fang://telemetry', (e) => telemetry.set(e.payload));
+async function initTauri() {
+  let listen = null;
+  const issues = [];
+  try {
+    const core = await import('@tauri-apps/api/core');
+    invoke = core.invoke;
+  } catch (error) {
+    bridgeErrors.set([{ command: 'Tauri bridge', message: String(error) }]);
+    return;
+  }
 
   try {
-    const up = await invoke('daemon_connected');
-    connected.set(up);
-    versionInfo.set(await invoke('get_version_info'));
-    if (up) status.set(await invoke('get_status'));
-    uiSettingsCommitter.confirm(await invoke('get_ui_settings'));
-    display.set(await invoke('get_display'));
-    panel.set(await invoke('get_panel'));
-  } catch (e) {
-    console.error('bridge init', e);
+    ({ listen } = await import('@tauri-apps/api/event'));
+  } catch (error) {
+    issues.push({ command: 'Tauri events', message: String(error) });
   }
+
+  if (listen) {
+    const handlers = [
+      ['fang://connected', (event) => publishEventState('connected', connected, event.payload)],
+      ['fang://compatibility', (event) => publishEventState('versionInfo', versionInfo, event.payload)],
+      ['fang://status', (event) => publishEventState('status', status, event.payload)],
+      ['fang://telemetry', (event) => telemetry.set(event.payload)]
+    ];
+    const results = await Promise.allSettled(
+      handlers.map(async ([name, handler]) => {
+        if (eventListeners.has(name)) return;
+        const unlisten = await listen(name, handler);
+        eventListeners.set(name, unlisten);
+      })
+    );
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        issues.push({
+          command: `listen ${handlers[index][0]}`,
+          message: String(result.reason)
+        });
+      }
+    });
+  }
+
+  const { issues: stateIssues } = await loadAndPublishBridgeSnapshot(
+    invoke,
+    snapshotRevisions,
+    (key, value) => {
+      if (key === 'uiSettings') uiSettingsCommitter.confirm(value);
+      else if (key === 'connected') publishLocalState(key, connected, value);
+      else if (key === 'versionInfo') publishLocalState(key, versionInfo, value);
+      else if (key === 'status') publishLocalState(key, status, value);
+      else if (key === 'display') publishLocalState(key, display, value);
+      else if (key === 'panel') publishLocalState(key, panel, value);
+    }
+  );
+  bridgeErrors.set([...issues, ...stateIssues]);
+}
+
+function publishEventState(key, store, value) {
+  publishLocalState(key, store, value);
+}
+
+function publishLocalState(key, store, value) {
+  snapshotRevisions.publishLocal(key, value, (confirmed) => store.set(confirmed));
 }
 
 export async function setPerfMode(perfMode, cpuBoost = null, gpuBoost = null) {
   if (invoke) {
-    status.set(await invoke('set_perf_mode', { perfMode, cpuBoost, gpuBoost }));
+    publishLocalState(
+      'status',
+      status,
+      await invoke('set_perf_mode', { perfMode, cpuBoost, gpuBoost })
+    );
   } else {
     sim.setPerfMode(perfMode, cpuBoost, gpuBoost);
   }
@@ -60,7 +120,7 @@ export async function setPerfMode(perfMode, cpuBoost = null, gpuBoost = null) {
 
 export async function setFan(fan) {
   if (invoke) {
-    status.set(await invoke('set_fan', { fan }));
+    publishLocalState('status', status, await invoke('set_fan', { fan }));
   } else {
     sim.setFan(fan);
   }
@@ -77,7 +137,7 @@ export async function saveUiSettings(next) {
 
 export async function setGpuMode(gpuMode) {
   if (invoke) {
-    status.set(await invoke('set_gpu_mode', { gpuMode }));
+    publishLocalState('status', status, await invoke('set_gpu_mode', { gpuMode }));
   } else {
     sim.setGpuMode(gpuMode);
   }
@@ -85,7 +145,7 @@ export async function setGpuMode(gpuMode) {
 
 export async function setBho(enabled, threshold) {
   if (invoke) {
-    status.set(await invoke('set_bho', { enabled, threshold }));
+    publishLocalState('status', status, await invoke('set_bho', { enabled, threshold }));
   } else {
     sim.setBho(enabled, threshold);
   }
@@ -94,7 +154,7 @@ export async function setBho(enabled, threshold) {
 /** Partial update: { brightness, kbdEffect, logoLed } — omit to keep. */
 export async function setLighting(patch) {
   if (invoke) {
-    status.set(await invoke('set_lighting', patch));
+    publishLocalState('status', status, await invoke('set_lighting', patch));
   } else {
     sim.setLighting(patch);
   }
@@ -111,7 +171,7 @@ export async function openExternal(url) {
 
 export async function setRefreshRate(hz) {
   if (invoke) {
-    display.set(await invoke('set_refresh_rate', { hz }));
+    publishLocalState('display', display, await invoke('set_refresh_rate', { hz }));
   } else {
     sim.setRefreshRate(hz);
   }
@@ -120,7 +180,7 @@ export async function setRefreshRate(hz) {
 /** Internal laptop-panel backlight brightness (percent). */
 export async function setPanelBrightness(percent) {
   if (invoke) {
-    panel.set(await invoke('set_panel_brightness', { percent }));
+    publishLocalState('panel', panel, await invoke('set_panel_brightness', { percent }));
   } else {
     sim.setPanelBrightness(percent);
   }
@@ -129,7 +189,7 @@ export async function setPanelBrightness(percent) {
 /** External-monitor DDC color-temperature preset (value = VCP 0x14 code). */
 export async function setColorPreset(value) {
   if (invoke) {
-    status.set(await invoke('set_color_preset', { value }));
+    publishLocalState('status', status, await invoke('set_color_preset', { value }));
   } else {
     sim.setColorPreset(value);
   }
@@ -138,7 +198,7 @@ export async function setColorPreset(value) {
 /** External-monitor DDC brightness (VCP 0x10), value = 0..=100 percent. */
 export async function setMonitorBrightness(value) {
   if (invoke) {
-    status.set(await invoke('set_monitor_brightness', { value }));
+    publishLocalState('status', status, await invoke('set_monitor_brightness', { value }));
   } else {
     sim.setMonitorBrightness(value);
   }
@@ -147,7 +207,7 @@ export async function setMonitorBrightness(value) {
 /** Immediately retry external-monitor DDC/CI discovery. */
 export async function rescanDdc() {
   if (invoke) {
-    status.set(await invoke('rescan_ddc'));
+    publishLocalState('status', status, await invoke('rescan_ddc'));
   } else {
     sim.rescanDdc();
   }
@@ -156,7 +216,9 @@ export async function rescanDdc() {
 /** AC/battery automation: enable + the profile and fan for each source. */
 export async function setAutoPower(enabled, acProfile, batteryProfile, acFan, batteryFan) {
   if (invoke) {
-    status.set(
+    publishLocalState(
+      'status',
+      status,
       await invoke('set_auto_power', {
         enabled,
         acProfile,
@@ -286,6 +348,10 @@ const sim = {
       gpu_temp_c: this.gpu,
       cpu_power_w: watts[0] + wiggle * 1.5,
       gpu_power_w: watts[1] + wiggle * 2,
+      gpu_asleep: false,
+      igpu_active_pct: Math.max(0, 22 + wiggle * 5),
+      igpu_power_w: 3.1 + wiggle * 0.3,
+      igpu_freq_mhz: 1600,
       on_ac: this.onAc,
       fan_rpm: this.rpm.map((r) => Math.round(r)),
       fan_target_rpm: fanTarget,

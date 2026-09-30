@@ -149,6 +149,23 @@ the optimizer at 80%. With AC plugged and the battery above the cap,
 within a couple of minutes; `journalctl -u fangd` shows no EC errors.
 Disable to resume normal charging to 100%.
 
+## 6e. GPU telemetry and idle power
+
+- Compare the dGPU label with its PCI `power/runtime_status`: **asleep** means
+  exactly `suspended`. An active device with `runtime_usage=0` is not asleep,
+  even when the daemon skips NVML to avoid keeping it active.
+- **Uncore power (iGPU proxy)** comes from the Intel RAPL uncore domain. It is
+  optional and includes components beyond the iGPU; do not interpret it as
+  an isolated GPU power meter.
+- Real Xe activity/frequency collection is disabled. The dashboard should show
+  **Activity unavailable** when only proxy power exists and should omit the
+  iGPU card when no optional reading exists. Simulated readings are not proof
+  of real collection or measured power savings.
+- Before enabling any future activity/frequency source, compare idle power,
+  runtime-PM state and GT idleness with collection enabled and disabled. Verify
+  that the source itself does not resume devices or force-wake the GT. Record
+  the driver/kernel version and measurement method.
+
 ## 7. Persistence
 
 - `sudo systemctl restart fangd` → previous mode/fan settings re-applied

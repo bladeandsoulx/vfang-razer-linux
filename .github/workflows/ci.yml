@@ -5,7 +5,53 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
+  windows:
+    name: Windows development checks (mock hardware only)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.96.1'
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            app/src-tauri
+      - run: npm ci --ignore-scripts
+        working-directory: app
+      - run: node app/scripts/version.mjs check
+      - run: >
+          node --test app/scripts/version.test.mjs
+          packaging/rpm/metadata.test.mjs packaging/arch/metadata.test.mjs
+          packaging/release/release-contract.test.mjs
+      - run: npm test
+        working-directory: app
+      - run: npm run build
+        working-directory: app
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - run: cargo build --workspace --locked
+      - run: cargo fmt --check
+        working-directory: app/src-tauri
+      - run: cargo clippy --bin fang --all-targets --locked -- -D warnings
+        working-directory: app/src-tauri
+      - run: cargo test --bin fang --locked
+        working-directory: app/src-tauri
+      - run: cargo build --bin fang --locked
+        working-directory: app/src-tauri
+
   contracts:
     name: installer + release contracts
     runs-on: ubuntu-24.04
@@ -22,9 +68,11 @@ jobs:
       - run: node app/scripts/version.mjs check
       - run: node --test app/scripts/version.test.mjs
       - run: node --test packaging/installer/check-os-release.test.mjs
+      - run: node --test packaging/installer/source-install.test.mjs packaging/installer/package-output.test.mjs
       - run: node packaging/installer/installer.test.mjs
       - run: node packaging/release/release-contract.test.mjs
       - run: node packaging/release/publish.test.mjs
+      - run: node --test packaging/release/release-notes.test.mjs
       - run: node packaging/deb/verify.test.mjs
       - run: node --test packaging/rpm/build-script.test.mjs packaging/rpm/metadata.test.mjs
       - run: node --test packaging/arch/build-script.test.mjs packaging/arch/metadata.test.mjs
@@ -80,6 +128,9 @@ jobs:
       - run: cargo clippy --bin fang --all-targets -- -D warnings
         working-directory: app/src-tauri
       - run: xvfb-run -a cargo test --bin fang -- --test-threads=1
+        working-directory: app/src-tauri
+      - name: Optimized GLib security regression
+        run: cargo test --manifest-path vendor-tests/glib-regression/Cargo.toml --release --locked
         working-directory: app/src-tauri
 
   deb-build:

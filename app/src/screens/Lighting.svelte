@@ -7,6 +7,7 @@
     setMonitorBrightness,
     rescanDdc
   } from '../lib/bridge.js';
+  import { createCommandRunner } from '../lib/command-runner.js';
 
   const EFFECTS = [
     { id: 'off', label: 'Off' },
@@ -21,6 +22,12 @@
   ];
 
   let slider = null; // local slider position before release
+  let keyboardBusy = false;
+  let keyboardError = '';
+  const keyboardCommands = createCommandRunner(({ busy, error }) => {
+    keyboardBusy = busy;
+    keyboardError = error;
+  });
 
   $: brightness = slider ?? $status?.kbd_brightness ?? 60;
   $: fill = brightness;
@@ -43,21 +50,23 @@
 
   function commitBrightness(e) {
     slider = null;
-    setLighting({ brightness: +e.target.value });
+    void keyboardCommands.run(() => setLighting({ brightness: +e.target.value }));
   }
 
   function pickEffect(id) {
     const kbdEffect =
       id === 'static' ? { effect: 'static', ...hexToRgb(color) } : { effect: id };
-    setLighting({ kbdEffect });
+    void keyboardCommands.run(() => setLighting({ kbdEffect }));
   }
 
   function pickColor(e) {
-    setLighting({ kbdEffect: { effect: 'static', ...hexToRgb(e.target.value) } });
+    void keyboardCommands.run(() =>
+      setLighting({ kbdEffect: { effect: 'static', ...hexToRgb(e.target.value) } })
+    );
   }
 
   function pickLogo(id) {
-    setLighting({ logoLed: id });
+    void keyboardCommands.run(() => setLighting({ logoLed: id }));
   }
 
   // ---- laptop panel brightness + external-monitor brightness/color -------
@@ -65,6 +74,8 @@
   let monSlider = null;
   let brightError = '';
   let colorError = '';
+  let panelBusy = false;
+  let monitorBusy = false;
   let rescanBusy = false;
   let scanMessage = '';
 
@@ -74,29 +85,38 @@
   async function commitPanel(e) {
     panelSlider = null;
     brightError = '';
+    panelBusy = true;
     try {
       await setPanelBrightness(+e.target.value);
     } catch (err) {
       brightError = String(err);
+    } finally {
+      panelBusy = false;
     }
   }
 
   async function commitMonitor(e) {
     monSlider = null;
     colorError = '';
+    monitorBusy = true;
     try {
       await setMonitorBrightness(+e.target.value);
     } catch (err) {
       colorError = String(err);
+    } finally {
+      monitorBusy = false;
     }
   }
 
   async function pickMonitorColor(value) {
     colorError = '';
+    monitorBusy = true;
     try {
       await setColorPreset(value);
     } catch (err) {
       colorError = String(err);
+    } finally {
+      monitorBusy = false;
     }
   }
 
@@ -126,10 +146,12 @@
         <div class="cap mono">{brightness}<em>% brightness</em></div>
         <input
           type="range"
+          aria-label="Keyboard backlight brightness"
           min="0"
           max="100"
           step="5"
           value={brightness}
+          disabled={keyboardBusy}
           style="--fill:{fill}%"
           on:input={(e) => (slider = +e.target.value)}
           on:change={commitBrightness}
@@ -138,9 +160,14 @@
 
       <div class="group">
         <span class="card-label">Effect</span>
-        <div class="seg">
+        <div class="seg" role="group" aria-label="Keyboard lighting effect">
           {#each EFFECTS as e}
-            <button class:on={effect === e.id} on:click={() => pickEffect(e.id)}>{e.label}</button>
+            <button
+              class:on={effect === e.id}
+              aria-pressed={effect === e.id}
+              disabled={keyboardBusy}
+              on:click={() => pickEffect(e.id)}>{e.label}</button
+            >
           {/each}
         </div>
       </div>
@@ -148,10 +175,19 @@
       {#if effect === 'static'}
         <label class="colorrow">
           <span>Color</span>
-          <input type="color" value={color} on:change={pickColor} />
+          <input
+            type="color"
+            value={color}
+            disabled={keyboardBusy}
+            on:change={pickColor}
+          />
           <span class="mono dim">{color}</span>
         </label>
       {/if}
+      {#if keyboardError}
+        <p class="err" role="alert">Could not apply keyboard lighting: {keyboardError}</p>
+      {/if}
+      {#if keyboardBusy}<p class="hint" role="status">Applying keyboard lighting…</p>{/if}
     </div>
 
     <div class="card rise pad" style="animation-delay:140ms">
@@ -162,10 +198,12 @@
             <div class="cap mono">{monitorBrightness}<em>% brightness</em></div>
             <input
               type="range"
+              aria-label="External monitor brightness"
               min="0"
               max="100"
               step="5"
               value={monitorBrightness}
+              disabled={monitorBusy || rescanBusy}
               style="--fill:{monitorBrightness}%"
               on:input={(e) => (monSlider = +e.target.value)}
               on:change={commitMonitor}
@@ -181,6 +219,8 @@
                 <button
                   class="chip"
                   class:on={$status.color_current === p.value}
+                  aria-pressed={$status.color_current === p.value}
+                  disabled={monitorBusy || rescanBusy}
                   on:click={() => pickMonitorColor(p.value)}
                 >
                   {p.name}
@@ -196,8 +236,8 @@
             The laptop panel can't be color-managed on Linux — no Synapse-style
             gamut clamp exists.
           </p>
-          <button class="chip" disabled={rescanBusy} on:click={scanMonitor}>
-            {rescanBusy ? 'Scanning…' : 'Rescan'}
+          <button class="chip" disabled={rescanBusy || monitorBusy} on:click={scanMonitor}>
+            {rescanBusy ? 'Scanning…' : monitorBusy ? 'Applying…' : 'Rescan'}
           </button>
         </div>
       {:else if $status}
@@ -206,13 +246,13 @@
             No DDC/CI monitor detected yet. VFang retries automatically after boot
             and hot-plug. Check that DDC/CI is enabled in the monitor's on-screen menu.
           </p>
-          <button class="chip" disabled={rescanBusy} on:click={scanMonitor}>
-            {rescanBusy ? 'Scanning…' : 'Rescan now'}
+          <button class="chip" disabled={rescanBusy || monitorBusy} on:click={scanMonitor}>
+            {rescanBusy ? 'Scanning…' : monitorBusy ? 'Applying…' : 'Rescan now'}
           </button>
         </div>
       {/if}
       {#if scanMessage}<p class="scan">{scanMessage}</p>{/if}
-      {#if colorError}<p class="err">{colorError}</p>{/if}
+      {#if colorError}<p class="err" role="alert">{colorError}</p>{/if}
     </div>
   </div>
 
@@ -221,9 +261,13 @@
       <div class="card rise pad" style="animation-delay:70ms">
         <span class="card-label">Lid logo</span>
         <div class="group">
-          <div class="seg">
+          <div class="seg" role="group" aria-label="Lid logo lighting">
             {#each LOGO_MODES as m}
-              <button class:on={$status?.logo_led === m.id} on:click={() => pickLogo(m.id)}>
+              <button
+                class:on={$status?.logo_led === m.id}
+                aria-pressed={$status?.logo_led === m.id}
+                disabled={keyboardBusy}
+                on:click={() => pickLogo(m.id)}>
                 {m.label}
               </button>
             {/each}
@@ -242,17 +286,20 @@
           <div class="cap mono">{panelBrightness}<em>% brightness</em></div>
           <input
             type="range"
+            aria-label="Laptop panel brightness"
             min="5"
             max="100"
             step="5"
             value={panelBrightness}
+            disabled={panelBusy}
             style="--fill:{panelBrightness}%"
             on:input={(e) => (panelSlider = +e.target.value)}
             on:change={commitPanel}
           />
         </div>
         <p class="hint">The built-in screen's backlight — applies instantly.</p>
-        {#if brightError}<p class="err">{brightError}</p>{/if}
+        {#if panelBusy}<p class="hint" role="status">Applying panel brightness…</p>{/if}
+        {#if brightError}<p class="err" role="alert">{brightError}</p>{/if}
       </div>
     {/if}
   </div>

@@ -74,6 +74,7 @@
   }
 
   function editPoint(index, field, value) {
+    if (busy) return;
     curvePoints = curvePoints.map((point, i) =>
       i === index ? { ...point, [field]: +value } : point
     );
@@ -81,12 +82,14 @@
   }
 
   function removePoint(index) {
+    if (busy) return;
     if (curvePoints.length <= 2) return;
     curvePoints = curvePoints.filter((_, i) => i !== index);
     curveDirty = true;
   }
 
   function addPoint() {
+    if (busy) return;
     if (curvePoints.length >= 8) return;
     const last = curvePoints[curvePoints.length - 1] ?? { temp_c: 40, rpm: min };
     if (last.temp_c >= 100) return;
@@ -127,7 +130,7 @@
 
   <div class="controls card rise" style="animation-delay:70ms">
     <span class="card-label">Fan mode</span>
-    <div class="seg" aria-label="Fan mode">
+    <div class="seg" role="group" aria-label="Fan mode">
       <button class:on={mode === 'auto'} aria-pressed={mode === 'auto'} disabled={busy} on:click={toAuto}>
         Auto
       </button>
@@ -163,7 +166,7 @@
         </div>
       </div>
     {:else if curve}
-      <div class="curve-editor">
+      <div class="curve-editor" aria-busy={busy}>
         <div class="curve-head">
           <span class="card-label">Temperature points</span>
           <span class="mono live-target">now {runtimeTarget ?? '--'} rpm</span>
@@ -179,6 +182,7 @@
                 max="100"
                 step="1"
                 value={point.temp_c}
+                disabled={busy}
                 on:input={(e) => editPoint(i, 'temp_c', e.target.value)}
               />
               <em>°C</em>
@@ -191,6 +195,7 @@
                 {max}
                 step="100"
                 value={point.rpm}
+                disabled={busy}
                 style="--fill:{((point.rpm - min) / Math.max(1, max - min)) * 100}%"
                 on:input={(e) => editPoint(i, 'rpm', e.target.value)}
               />
@@ -199,7 +204,7 @@
             <button
               class="remove"
               aria-label="Remove curve point {i + 1}"
-              disabled={curvePoints.length <= 2}
+              disabled={busy || curvePoints.length <= 2}
               on:click={() => removePoint(i)}
             >×</button>
           </div>
@@ -207,7 +212,7 @@
         <div class="curve-actions">
           <button
             class="add"
-            disabled={curvePoints.length >= 8 || lastCurveTemp >= 100}
+            disabled={busy || curvePoints.length >= 8 || lastCurveTemp >= 100}
             on:click={addPoint}>+ Add point</button
           >
           <button class="apply" disabled={!curveDirty || busy} on:click={applyCurve}>

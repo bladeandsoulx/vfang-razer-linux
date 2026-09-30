@@ -53,10 +53,7 @@ mod backend {
 #[cfg(target_os = "linux")]
 mod backend {
     use super::DisplayInfo;
-    use std::io::Read;
-    use std::process::{Command, Stdio};
-    use std::thread;
-    use std::time::{Duration, Instant};
+    use std::time::Duration;
 
     const COMMAND_TIMEOUT: Duration = Duration::from_secs(2);
 
@@ -64,68 +61,16 @@ mod backend {
         run_with_timeout(cmd, args, COMMAND_TIMEOUT)
     }
 
-    /// Drain both pipes while polling the child so a helper cannot block on a
-    /// full output buffer. On timeout the child is terminated and reaped.
+    /// Bound both output streams and include inherited-pipe completion in the
+    /// deadline. The shared runner terminates the helper's process group.
     fn run_with_timeout(cmd: &str, args: &[&str], timeout: Duration) -> Result<String, String> {
-        let mut child = Command::new(cmd)
-            .args(args)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|e| format!("{cmd}: {e}"))?;
-
-        let mut stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| format!("{cmd}: no stdout"))?;
-        let mut stderr = child
-            .stderr
-            .take()
-            .ok_or_else(|| format!("{cmd}: no stderr"))?;
-        let stdout_reader = thread::spawn(move || {
-            let mut bytes = Vec::new();
-            stdout.read_to_end(&mut bytes).map(|_| bytes)
-        });
-        let stderr_reader = thread::spawn(move || {
-            let mut bytes = Vec::new();
-            stderr.read_to_end(&mut bytes).map(|_| bytes)
-        });
-
-        let started = Instant::now();
-        let status = loop {
-            match child.try_wait() {
-                Ok(Some(status)) => break status,
-                Ok(None) if started.elapsed() < timeout => {
-                    thread::sleep(Duration::from_millis(10));
-                }
-                Ok(None) => {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    return Err(format!("{cmd}: timed out after {} ms", timeout.as_millis()));
-                }
-                Err(error) => {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    return Err(format!("{cmd}: wait: {error}"));
-                }
-            }
-        };
-
-        let stdout = stdout_reader
-            .join()
-            .map_err(|_| format!("{cmd}: stdout reader panicked"))?
-            .map_err(|e| format!("{cmd}: read stdout: {e}"))?;
-        let stderr = stderr_reader
-            .join()
-            .map_err(|_| format!("{cmd}: stderr reader panicked"))?
-            .map_err(|e| format!("{cmd}: read stderr: {e}"))?;
-
-        if status.success() {
-            Ok(String::from_utf8_lossy(&stdout).into_owned())
+        let output = crate::process::output_with_timeout(cmd, args, timeout)?;
+        if output.status.success() {
+            Ok(String::from_utf8_lossy(&output.stdout).into_owned())
         } else {
             Err(format!(
                 "{cmd}: {}",
-                String::from_utf8_lossy(&stderr).trim()
+                String::from_utf8_lossy(&output.stderr).trim()
             ))
         }
     }
@@ -216,6 +161,34 @@ mod backend {
                 .expect_err("sleep should time out");
             assert!(error.contains("timed out"), "{error}");
             assert!(started.elapsed() < Duration::from_secs(1));
+        }
+
+        #[test]
+        fn deadline_includes_inherited_output_pipes() {
+            let started = Instant::now();
+            let error = run_with_timeout(
+                "sh",
+                &["-c", "sleep 0.6 & printf display"],
+                Duration::from_millis(80),
+            )
+            .expect_err("descendant pipe ownership must not bypass the deadline");
+            assert!(error.contains("timed out"), "{error}");
+            assert!(started.elapsed() < Duration::from_millis(400));
+        }
+
+        #[test]
+        fn excessive_helper_output_is_rejected() {
+            let result = run_with_timeout(
+                "sh",
+                &[
+                    "-c",
+                    "head -c 1048577 /dev/zero; head -c 1048577 /dev/zero >&2",
+                ],
+                Duration::from_secs(2),
+            );
+            assert!(result.is_err(), "display helper output must be bounded");
+            let error = result.err().unwrap();
+            assert!(error.contains("output exceeded"), "{error}");
         }
     }
 
