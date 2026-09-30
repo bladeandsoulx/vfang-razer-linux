@@ -51,6 +51,26 @@ function mutateFixture(text, pattern, replacement) {
   return mutated;
 }
 
+for (const invalidFile of ['packaging/rpm/fang.spec', 'packaging/installer/banner.txt']) {
+  test(`failed ${invalidFile} validation leaves every release file unchanged`, () => {
+    const dir = fixture();
+    try {
+      fs.writeFileSync(path.join(dir, invalidFile), 'invalid release metadata\n');
+      const names = [...files, 'install.sh'];
+      const before = new Map(names.map((name) => [name, fs.readFileSync(path.join(dir, name))]));
+      const [major, minor, patch] = fixtureVersion.split('.').map(Number);
+      const result = run(dir, 'set', `${major}.${minor}.${patch + 1}`);
+      assert.notEqual(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stderr, /could not update/);
+      for (const name of names) {
+        assert.deepEqual(fs.readFileSync(path.join(dir, name)), before.get(name), name);
+      }
+    } finally {
+      fs.rmSync(dir, { recursive: true });
+    }
+  });
+}
+
 test('check rejects an incorrect RPM upper bound', () => {
   const dir = fixture();
   const spec = path.join(dir, 'packaging/rpm/fang.spec');
@@ -144,7 +164,7 @@ test('check preserves Pacman daemon bounds after a within-word line continuation
   );
   const result = run(dir, 'check');
   assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.match(result.stdout, /VFang version sync OK: 0\.9\.9/);
+  assert.equal(result.stdout.trim(), `VFang version sync OK: ${fixtureVersion}`);
   fs.rmSync(dir, { recursive: true });
 });
 
@@ -162,7 +182,7 @@ test('check preserves Pacman daemon bounds after an unquoted hash within a depen
   );
   const result = run(dir, 'check');
   assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.match(result.stdout, /VFang version sync OK: 0\.9\.9/);
+  assert.equal(result.stdout.trim(), `VFang version sync OK: ${fixtureVersion}`);
   fs.rmSync(dir, { recursive: true });
 });
 
@@ -180,7 +200,7 @@ test('check preserves Pacman daemon bounds after a quoted hash', () => {
   );
   const result = run(dir, 'check');
   assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.match(result.stdout, /VFang version sync OK: 0\.9\.9/);
+  assert.equal(result.stdout.trim(), `VFang version sync OK: ${fixtureVersion}`);
   fs.rmSync(dir, { recursive: true });
 });
 
@@ -198,7 +218,7 @@ test('check preserves Pacman daemon bounds after an escaped hash', () => {
   );
   const result = run(dir, 'check');
   assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.match(result.stdout, /VFang version sync OK: 0\.9\.9/);
+  assert.equal(result.stdout.trim(), `VFang version sync OK: ${fixtureVersion}`);
   fs.rmSync(dir, { recursive: true });
 });
 

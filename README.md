@@ -52,7 +52,7 @@ app has the same interface._
 - 🎛️ **Performance modes:** Silent, Balanced, Gaming, and Custom CPU/GPU power.
 - 🌀 **Fan control:** Automatic, fixed RPM, or your own fan curve.
 - 🔌 **Power automation:** Change performance and fan settings when you plug in
-  or unplug the charger.
+  or unplug the charger, including your saved Custom CPU/GPU levels.
 - 🔋 **Battery care:** Limit charging to 50–80% on supported models.
 - 🌈 **Lighting:** Control keyboard brightness/effects and the lid logo.
 - 🎮 **GPU mode:** Switch between integrated, hybrid, and dedicated graphics.
@@ -86,10 +86,11 @@ derivatives are accepted when `/etc/os-release` contains the exact
 are not tested directly. Other CPU architectures and unsupported base releases
 are rejected before anything is installed.
 
-**Blade 16 2026 (OLED):** the built-in panel's brightness keys and VFang's
-brightness slider only work with the kernel parameter
-`xe.enable_dpcd_backlight=1`, which switches the Intel `xe` driver to the
-panel's DisplayPort (DPCD) backlight control. Add it to your bootloader's
+**Blade 16 2026 (OLED):** if the built-in panel's brightness keys and VFang's
+brightness slider do not dim the screen, the tested Intel `xe` setup required
+the kernel parameter `xe.enable_dpcd_backlight=1`. This enables the driver's
+DisplayPort (DPCD) backlight control; the need for it depends on the kernel
+and panel configuration. Add it to your bootloader's
 kernel command line (for example a file in `/etc/limine-entry-tool.d/` followed by
 `sudo limine-update`, or `GRUB_CMDLINE_LINUX_DEFAULT` followed by
 `sudo grub-mkconfig -o /boot/grub/grub.cfg`), then reboot. This is a
@@ -108,7 +109,7 @@ features have guardrails:
 - A guard that cannot be disabled forces maximum fans at CPU **95 °C** or GPU
   **87 °C**. Missing or stale CPU temperature data also forces maximum fans.
 - Stopping the background service restores the laptop's automatic fan control.
-- App/daemon version mismatches allow status viewing but block hardware changes.
+- App/daemon API mismatches allow status viewing but block hardware changes.
 - Custom CPU **Boost** means more heat and fan noise.
 
 The laptop's own thermal protections continue to work as an additional safety
@@ -128,10 +129,10 @@ bash install.sh
 This lets you read the script before it asks for administrator access.
 
 For an extra integrity check, download the installer and checksum manifest from
-the pinned v0.9.9 release:
+the pinned v1.0.0 release:
 
 ```bash
-curl -fLO 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/download/v0.9.9/{install.sh,SHA256SUMS}'
+curl -fLO 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/download/v1.0.0/{install.sh,SHA256SUMS}'
 grep '  install.sh$' SHA256SUMS > install.sh.sha256
 sha256sum --check install.sh.sha256
 ```
@@ -145,10 +146,10 @@ Download both packages from the same release, then install them together:
 
 ```bash
 # Ubuntu or Debian
-sudo apt install ./fangd_0.9.9-1_amd64.deb ./Fang_0.9.9_amd64.deb
+sudo apt install ./fangd_1.0.0-1_amd64.deb ./Fang_1.0.0_amd64.deb
 
 # Fedora 43 or 44
-sudo dnf install ./fangd-0.9.9-1.x86_64.rpm ./fang-0.9.9-1.x86_64.rpm
+sudo dnf install ./fangd-1.0.0-1.x86_64.rpm ./fang-1.0.0-1.x86_64.rpm
 ```
 
 On Arch Linux, CachyOS, or a compatible Arch derivative, first fully update
@@ -156,8 +157,8 @@ with `sudo pacman -Syu`. Reboot before installing VFang if that update requests
 it, then install the release pair:
 
 ```bash
-sudo pacman -U ./fangd-0.9.9-1-x86_64.pkg.tar.zst \
-  ./fang-0.9.9-1-x86_64.pkg.tar.zst
+sudo pacman -U ./fangd-1.0.0-1-x86_64.pkg.tar.zst \
+  ./fang-1.0.0-1-x86_64.pkg.tar.zst
 ```
 
 Enable the background service and give your user access:
@@ -182,14 +183,36 @@ cd vfang-razer-linux
 sudo ./packaging/install-from-source.sh
 ```
 
-The script installs the build tools, builds and installs VFang, starts its
-background service, and gives your user access.
+The script installs the build tools, builds both VFang packages, then installs
+them together and starts the background service. It also gives your user access.
+A failed build stops before either VFang package is installed.
 
 </details>
+
+## GPU telemetry
+
+The dashboard reports the discrete GPU as **asleep** only when Linux reports
+it runtime-suspended. Skipping a GPU query does not itself mean the GPU is
+asleep. On supported Intel systems, **Uncore power (iGPU proxy)** is optional
+RAPL domain power; it includes work beyond the integrated GPU.
+
+Real Xe activity and frequency readings are currently unavailable because
+reading their sysfs attributes can wake the GPU. The simulator still provides
+those values. A passive hardware source must be validated before enabling
+real activity/frequency collection.
 
 ## Development
 
 You can develop VFang on any OS without Razer hardware.
+
+To review code, build components and run automated checks on Windows 11 without
+opening VFang or installing its hardware service, follow the
+[Windows contributor instructions](CONTRIBUTING.md#review-and-build-on-windows-without-opening-vfang).
+Real fan, battery, GPU and display behavior still needs testing on a Razer
+Blade running Linux.
+
+For Linux checks using mocks and fixtures without opening the app or installing
+the hardware service, follow the [Linux contributor instructions](CONTRIBUTING.md#review-and-build-on-linux-without-opening-vfang).
 
 ```bash
 # Terminal 1: run the daemon with simulated hardware

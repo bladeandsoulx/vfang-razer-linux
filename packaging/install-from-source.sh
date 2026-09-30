@@ -129,6 +129,38 @@ source_installer_require_debian_family() {
     return 1
 }
 
+# Complete both builds before changing the installed VFang package pair. Keep
+# the install phase in a subshell so a failed build always stops it, including
+# callers that source this script for the fixture tests.
+source_installer_build_and_install() (
+    set -euo pipefail
+    local repo_root=$1
+    local version=$2
+    local daemon_deb="$repo_root/target/debian/fangd_${version}-1_amd64.deb"
+    local app_deb="$repo_root/app/src-tauri/target/release/bundle/deb/Fang_${version}_amd64.deb"
+    local stage
+
+    cd "$repo_root"
+    run_user node app/scripts/version.mjs check
+    echo "==> building the fangd .deb"
+    run_user cargo deb -p fangd --locked
+    [[ -f $daemon_deb ]]
+
+    echo "==> building the VFang app (Tauri)"
+    cd "$repo_root/app"
+    run_user npm ci
+    run_user npm run tauri build -- --bundles deb
+    [[ -f $app_deb ]]
+
+    # Freeze the complete pair before asking apt to install either package.
+    stage="$(mktemp -d)"
+    trap 'rm -rf -- "$stage"' EXIT
+    install -m0644 "$daemon_deb" "$stage/fangd_${version}-1_amd64.deb"
+    install -m0644 "$app_deb" "$stage/Fang_${version}_amd64.deb"
+    echo "==> installing the VFang package pair"
+    apt-get install -y "$stage/fangd_${version}-1_amd64.deb" "$stage/Fang_${version}_amd64.deb"
+)
+
 if [[ ${BASH_SOURCE[0]} != "$0" ]]; then
     return 0
 fi
@@ -173,30 +205,13 @@ if ! run_user sh -c 'command -v cargo >/dev/null'; then
     exit 1
 fi
 
-echo "==> building the fangd .deb"
 cd "$REPO_ROOT"
 if ! run_user sh -c 'command -v cargo-deb >/dev/null'; then
     echo "==> installing cargo-deb (one-time; this compiles, give it a minute)"
     run_user cargo install cargo-deb --locked
 fi
-run_user cargo deb -p fangd
-FANGD_DEB="target/debian/fangd_${VERSION}-1_amd64.deb"
-[[ -f "$FANGD_DEB" ]]
-echo "==> installing $FANGD_DEB"
-# The package installs the binary + unit, creates the 'fang' group, and enables
-# and starts the service — see the cargo-deb metadata in crates/fangd/Cargo.toml.
-# Installing it this way means `apt remove fangd` cleanly undoes everything.
-apt-get install -y "$FANGD_DEB"
+source_installer_build_and_install "$REPO_ROOT" "$VERSION"
 echo "==> fangd running: $(systemctl is-active fangd)"
-
-echo "==> building the VFang app (Tauri)"
-cd "$REPO_ROOT/app"
-run_user npm install
-run_user npm run tauri build
-DEB="src-tauri/target/release/bundle/deb/Fang_${VERSION}_amd64.deb"
-[[ -f "$DEB" ]]
-echo "==> installing $DEB"
-apt-get install -y "$DEB"
 
 if [ "$REAL_USER" != "root" ]; then
     usermod -aG fang "$REAL_USER"

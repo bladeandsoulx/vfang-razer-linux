@@ -76,6 +76,14 @@ mod backend {
             .and_then(|s| s.trim().parse().ok())
     }
 
+    fn percent_from_raw(current: u32, max: u32) -> u8 {
+        ((u64::from(current.min(max)) * 100 + u64::from(max) / 2) / u64::from(max)) as u8
+    }
+
+    fn raw_from_percent(percent: u8, max: u32) -> u32 {
+        ((u64::from(percent.clamp(5, 100)) * u64::from(max) / 100).max(1)) as u32
+    }
+
     pub fn get() -> PanelInfo {
         let Some((name, max)) = find_backlight() else {
             return PanelInfo {
@@ -87,7 +95,7 @@ mod backend {
         let cur = raw_level(&name).unwrap_or(0);
         PanelInfo {
             supported: true,
-            brightness: ((cur.min(max) * 100 + max / 2) / max) as u8,
+            brightness: percent_from_raw(cur, max),
             hint: String::new(),
         }
     }
@@ -95,8 +103,7 @@ mod backend {
     pub fn set(percent: u8) -> Result<PanelInfo, String> {
         let (name, max) = find_backlight().ok_or("no internal panel backlight")?;
         // Never let the app drive the panel fully dark.
-        let pct = percent.clamp(5, 100) as u32;
-        let raw = (pct * max / 100).max(1);
+        let raw = raw_from_percent(percent, max);
         let conn = zbus::blocking::Connection::system().map_err(|e| e.to_string())?;
         conn.call_method(
             Some("org.freedesktop.login1"),
@@ -107,6 +114,28 @@ mod backend {
         )
         .map_err(|e| format!("SetBrightness: {e}"))?;
         Ok(get())
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::{percent_from_raw, raw_from_percent};
+
+        #[test]
+        fn panel_brightness_handles_full_u32_range() {
+            assert_eq!(percent_from_raw(u32::MAX, u32::MAX), 100);
+            assert_eq!(percent_from_raw(u32::MAX / 2, u32::MAX), 50);
+            assert_eq!(percent_from_raw(u32::MAX, 1000), 100);
+            assert_eq!(raw_from_percent(100, u32::MAX), u32::MAX);
+            assert_eq!(raw_from_percent(50, u32::MAX), u32::MAX / 2);
+        }
+
+        #[test]
+        fn panel_brightness_keeps_a_nonzero_safe_minimum() {
+            assert_eq!(raw_from_percent(0, 1000), 50);
+            assert_eq!(raw_from_percent(255, 1000), 1000);
+            assert_eq!(raw_from_percent(5, 1), 1);
+            assert_eq!(percent_from_raw(500, 1000), 50);
+        }
     }
 }
 

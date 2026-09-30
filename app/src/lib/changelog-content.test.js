@@ -8,6 +8,39 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.
 const panel = fs.readFileSync(path.join(root, 'app/src/screens/Changelog.svelte'), 'utf8');
 const changelog = fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
 
+test('v1.0.0 app notes match the release date and describe telemetry corrections', () => {
+  const upcomingStart = panel.indexOf("version: '1.0.0'");
+  const releasedStart = panel.indexOf("version: '0.9.9'");
+  const upcoming = panel.slice(upcomingStart, releasedStart);
+
+  assert.ok(upcomingStart >= 0 && releasedStart > upcomingStart);
+  const release = changelog.match(/^## \[1\.0\.0\] — (Unreleased|\d{4}-\d{2}-\d{2}) —/m);
+  assert.ok(release, 'the root changelog must identify the v1.0.0 release state');
+  assert.ok(upcoming.includes(`date: '${release[1]}'`), 'app and root release dates must match');
+  assert.match(upcoming, /shared iGPU reading type.*Linux-only module/i);
+  assert.match(upcoming, /observed suspended runtime state/i);
+  assert.doesNotMatch(upcoming, /PR #11 no longer breaks/);
+});
+
+test('v1.0.0 app notes cover Linux improvements without overstating hardware validation', () => {
+  const upcoming = panel.slice(0, panel.indexOf("version: '0.9.9'"));
+
+  for (const feature of [
+    /Custom profiles.*AC and battery/i,
+    /Fallible packet constructors.*without panicking/i,
+    /Linux display helpers.*inherited pipes.*deadline/i,
+    /Internal-panel brightness.*large sysfs ranges/i,
+    /Source installation.*both builds.*package pair/i,
+    /package build outputs preserve existing artifacts/i,
+    /GLib string-iterator crash fix.*backported/i,
+    /version-only scans.*GLib advisory/i,
+    /Linux native builds.*automated regression checks passed/i,
+    /physical GPU\/fan\/battery\/lighting validation remain pending/i
+  ]) {
+    assert.match(upcoming, feature);
+  }
+});
+
 test('the in-app changelog contains the latest releases in descending order', () => {
   const v099 = panel.indexOf("version: '0.9.9'");
   const v098 = panel.indexOf("version: '0.9.8'");

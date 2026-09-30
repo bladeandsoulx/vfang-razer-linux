@@ -375,13 +375,13 @@ parse_manifest() {
     else
       fatal "Malformed checksum manifest line $line_count."
     fi
-    [[ -z ${digests[$name]+present} ]] ||
-      fatal "Duplicate checksum manifest entry: $name"
     case $name in
       install.sh|"$DEB_FANG"|"$DEB_FANGD"|"$RPM_FANG"|"$RPM_FANGD"|"$PACMAN_FANG"|"$PACMAN_FANGD") ;;
       *) fatal "Unexpected checksum manifest entry: $name" ;;
     esac
-    digests[$name]=$digest
+    [[ -z ${digests["$name"]+present} ]] ||
+      fatal "Duplicate checksum manifest entry: $name"
+    digests["$name"]=$digest
   done < "$manifest"
 
   [[ $line_count == 7 ]] ||
@@ -791,8 +791,8 @@ mutate_system() {
 main() {
 set -euo pipefail
 umask 077
-readonly VERSION='0.9.9'
-readonly RELEASE_TAG='v0.9.9'
+readonly VERSION='1.0.0'
+readonly RELEASE_TAG='v1.0.0'
 readonly REPOSITORY='bladeandsoulx/vfang-razer-linux'
 readonly RELEASE_BASE="https://github.com/${REPOSITORY}/releases/download/${RELEASE_TAG}"
 readonly DEB_FANG="Fang_${VERSION}_amd64.deb"

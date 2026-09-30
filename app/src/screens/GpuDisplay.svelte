@@ -3,6 +3,7 @@
   import Icon from '../lib/components/Icon.svelte';
   import { status, display } from '../lib/stores.js';
   import { setGpuMode, setRefreshRate } from '../lib/bridge.js';
+  import { createCommandRunner } from '../lib/command-runner.js';
 
   const GPU_MODES = [
     {
@@ -25,19 +26,19 @@
     }
   ];
 
+  let gpuBusy = false;
   let gpuError = '';
   let rateError = '';
   let busyHz = null;
+  const gpuCommands = createCommandRunner(({ busy, error }) => {
+    gpuBusy = busy;
+    gpuError = error;
+  });
 
   $: gpuSupported = $status?.gpu_mode != null;
 
-  async function pickGpu(e) {
-    gpuError = '';
-    try {
-      await setGpuMode(e.detail);
-    } catch (err) {
-      gpuError = String(err);
-    }
+  function pickGpu(e) {
+    void gpuCommands.run(() => setGpuMode(e.detail));
   }
 
   async function pickRate(hz) {
@@ -59,7 +60,13 @@
 {#if gpuSupported}
   <div class="cards">
     {#each GPU_MODES as m, i}
-      <ModeCard {...m} active={$status?.gpu_mode === m.mode} delay={i * 45} on:select={pickGpu} />
+      <ModeCard
+        {...m}
+        active={$status?.gpu_mode === m.mode}
+        disabled={gpuBusy}
+        delay={i * 45}
+        on:select={pickGpu}
+      />
     {/each}
   </div>
   {#if $status?.gpu_mode_pending}
@@ -67,6 +74,9 @@
       <Icon name="warn" size={14} />
       GPU switch staged — it takes effect after you log out or reboot.
     </div>
+  {/if}
+  {#if gpuBusy}
+    <div class="flag warn rise" role="status">Applying GPU mode…</div>
   {/if}
 {:else}
   <div class="card rise pad unsupported">
@@ -81,7 +91,7 @@
   </div>
 {/if}
 {#if gpuError}
-  <div class="flag error rise"><Icon name="warn" size={14} /> {gpuError}</div>
+  <div class="flag error rise" role="alert"><Icon name="warn" size={14} /> {gpuError}</div>
 {/if}
 
 <div class="section-label card-label second">Refresh rate</div>
@@ -94,10 +104,11 @@
         <span class="mono panel">{$display.output}</span>
         <span class="dim mono">{$display.resolution}</span>
       </div>
-      <div class="seg">
+      <div class="seg" role="group" aria-label="Refresh rate">
         {#each $display.available_hz as hz}
           <button
             class:on={$display.current_hz === hz}
+            aria-pressed={$display.current_hz === hz}
             disabled={busyHz != null}
             on:click={() => pickRate(hz)}
           >
@@ -114,7 +125,7 @@
     <p class="dim">Reading display modes…</p>
   {/if}
   {#if rateError}
-    <div class="flag error"><Icon name="warn" size={14} /> {rateError}</div>
+    <div class="flag error" role="alert"><Icon name="warn" size={14} /> {rateError}</div>
   {/if}
 </div>
 

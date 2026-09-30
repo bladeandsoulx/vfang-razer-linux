@@ -205,6 +205,11 @@ impl Core {
     fn sanitize_loaded_state(&mut self) {
         let before = self.state.clone();
         let info = self.hw.info();
+        // Boost level 3 is the CPU-only overclock setting; never replay it to
+        // the GPU zone from a stale or hand-edited state file.
+        if self.state.gpu_boost == Boost::Boost {
+            self.state.gpu_boost = Boost::High;
+        }
         if info.device_present {
             if self.state.cpu_boost == Boost::Boost && !info.has_cpu_boost_oc {
                 self.state.cpu_boost = Boost::High;
@@ -455,6 +460,9 @@ impl Core {
                     next.cpu_boost = *b;
                 }
                 if let Some(b) = gpu_boost {
+                    if *b == Boost::Boost {
+                        return Err("GPU boost overclock is CPU-only".into());
+                    }
                     next.gpu_boost = *b;
                 }
                 if next.cpu_boost == Boost::Boost && !self.hw.info().has_cpu_boost_oc {
@@ -888,6 +896,76 @@ mod tests {
         assert_eq!(normalize_rpm(3349, 2200, 5000), 3300);
         assert_eq!(normalize_rpm(3350, 2200, 5000), 3400);
         assert_eq!(normalize_rpm(9000, 2200, 5000), 5000);
+    }
+
+    #[test]
+    fn gpu_overclock_is_rejected_in_new_commands() {
+        let mut core = core_with(FanMode::Auto, Sample::default());
+        let error = core
+            .handle_set(&Command::SetPerfMode {
+                perf_mode: PerfMode::Custom,
+                cpu_boost: None,
+                gpu_boost: Some(Boost::Boost),
+            })
+            .expect_err("GPU overclock is not a supported command");
+        assert!(error.contains("GPU"), "{error}");
+        assert_eq!(core.state.gpu_boost, Boost::Medium);
+    }
+
+    #[test]
+    fn custom_automation_retains_power_levels_across_source_changes_and_restart() {
+        let state = AppliedState {
+            cpu_boost: Boost::High,
+            gpu_boost: Boost::Low,
+            ..AppliedState::default()
+        };
+        let (mut core, trace) = scripted_core(state, Sample::default(), vec![], vec![]);
+        core.state_path = std::env::temp_dir().join(format!(
+            "fangd-custom-power-automation-{}.json",
+            std::process::id()
+        ));
+        core.handle_set(&Command::SetAutoPower {
+            enabled: true,
+            ac_profile: PerfMode::Gaming,
+            battery_profile: PerfMode::Custom,
+            ac_fan: FanMode::Auto,
+            battery_fan: FanMode::Auto,
+        })
+        .unwrap();
+        assert!(core.power_tick(Some(true)));
+        assert_eq!(core.state.perf_mode, PerfMode::Gaming);
+        assert!(core.power_tick(Some(false)));
+        assert_eq!(core.state.perf_mode, PerfMode::Custom);
+        assert_eq!(core.state.cpu_boost, Boost::High);
+        assert_eq!(core.state.gpu_boost, Boost::Low);
+        assert_eq!(trace.applied.lock().unwrap().last(), Some(&core.state));
+        let restored = Core::new(
+            Box::new(TestHw {
+                sample: Sample::default(),
+                restored: None,
+            }),
+            AppliedState::load(&core.state_path),
+            core.state_path.clone(),
+        );
+        assert_eq!(restored.state, core.state);
+        std::fs::remove_file(&core.state_path).unwrap();
+    }
+
+    #[test]
+    fn persisted_gpu_overclock_is_normalized_to_high() {
+        let state = AppliedState {
+            gpu_boost: Boost::Boost,
+            ..AppliedState::default()
+        };
+        let core = Core::new(
+            Box::new(TestHw {
+                sample: Sample::default(),
+                restored: None,
+            }),
+            state,
+            std::env::temp_dir().join("fangd-invalid-gpu-boost-state.json"),
+        );
+        assert_eq!(core.state.gpu_boost, Boost::High);
     }
 
     #[test]

@@ -4,6 +4,112 @@ All notable changes to VFang are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] — Unreleased — Reliability and hardware telemetry
+
+### Added
+
+- Custom profiles are selectable for AC and battery power automation (issue
+  #9), using the saved CPU/GPU boost levels across power-source transitions.
+- Fallible packet constructors reject oversized argument payloads without
+  panicking, while existing fixed-size constructors keep their wire encoding.
+- Blade 16 (2026), USB PID `1532:02e0`, in the supported-model table from
+  PR #10. Its capabilities and fan limits follow the contributor's hardware
+  report; no additional physical validation was performed in this review.
+- Optional iGPU telemetry fields, mock transport coverage, and dashboard cards
+  for available telemetry from PR #11.
+- A Windows CI job and PowerShell contributor instructions for reviewing,
+  building and testing components without opening VFang or installing its
+  hardware service.
+
+### Fixed
+
+- Linux display helpers include descendants holding output pipes in their
+  deadline and bound captured output, using the daemon's shared runner.
+- Internal-panel brightness conversion uses widened arithmetic for the full
+  sysfs `u32` range, preserving the existing nonzero brightness floor.
+- Source installation builds and stages both packages before one install
+  transaction; a failed app build no longer leaves a newly installed daemon.
+- Linux strict Clippy accepts the platform-gated GPU query policy.
+- Windows mock-backend compilation after PR #11: the shared iGPU reading type
+  no longer depends on a Linux-only module.
+- GPU sleep reporting now reflects an observed suspended runtime state.
+  Skipping an NVML query no longer incorrectly labels an active GPU asleep.
+- GPU boost commands reject the CPU-only Boost level; older persisted GPU
+  Boost values are normalized to High.
+- Missing daemon command-line option values are rejected before hardware
+  initialization.
+- External-monitor brightness parsing handles extreme values without overflow
+  and rejects inconsistent current/maximum readings.
+- Late startup snapshots no longer overwrite newer events or confirmed
+  settings. Independent startup queries continue when another query fails,
+  with a visible Retry action for failures.
+- Performance, fan, GPU, lighting and settings controls show pending states
+  and command failures, and prevent overlapping saves. Fan-curve editing is
+  locked during Apply.
+- Toggles retain keyboard focus, show focus feedback and display confirmed
+  state. Battery optimizer failures are shown instead of leaving a misleading
+  local ON state when the backend rejects the request.
+- Sidebar navigation follows browser history and marks the active page.
+- Release-version updates validate every replacement before writing files, so
+  malformed later inputs do not partially update component versions.
+- Portable release checks handle Windows file URLs and explicitly skip
+  executable fixtures that require POSIX.
+
+### Changed
+
+- RPM/Arch producers refuse occupied package output directories and validate
+  both package identities before copying, preserving existing artifacts.
+- Source builds use `npm ci`, a locked daemon build, and DEB-only app bundling.
+- Removed real Xe activity/frequency polling introduced by PR #11 because
+  those sysfs reads can wake GPU hardware. Unavailable readings remain absent;
+  mock telemetry continues to provide activity and frequency values.
+- Label optional RAPL readings as "Uncore power (iGPU proxy)" and show
+  "Activity unavailable" when no activity reading exists. Older or unavailable
+  telemetry keeps the existing dashboard layout.
+- Clarify OLED/kernel guidance and distinguish Windows component checks from
+  Linux integration and physical hardware validation in the documentation.
+
+### Security
+
+- Backport the exact upstream GLib `VariantStrIter` fix for
+  [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html)
+  into the compatible 0.18.5 binding used throughout the GTK graph. The
+  optimized regression crashed with unpatched upstream code and passes with
+  the backport; the original source/license and provenance are retained.
+- Bound daemon request size, client count and incomplete-request/write wait
+  times while preserving healthy telemetry subscriptions and lag recovery.
+- Bound daemon helper output and inherited-pipe completion by the helper
+  deadline, retaining process ownership until cleanup.
+- Allowlist installer manifest filenames and prevent package lifecycle
+  verifiers from replacing an existing VFang installation.
+- Update compatible devalue, nanoid, postcss and event-listener lockfile
+  dependencies. The checked npm dependency audit reported no vulnerabilities;
+  the Rust dependency audit still has the maintenance advisories listed below.
+
+### Verification and known limitations
+
+- Windows Rust workspace/Tauri tests, frontend tests, portable release
+  contracts and parser checks passed, alongside formatting, strict Clippy and
+  component builds. POSIX-only fixtures were explicitly skipped on Windows.
+  Configured CI was not dispatched remotely during this work.
+- Linux compilation, mock daemon tests, native Tauri test harnesses and POSIX
+  installer/release fixtures are now validated on Zorin OS 18.1 (Ubuntu 24.04
+  base). Review/build steps do not open the application or install its service.
+- Issue [#7](https://github.com/bladeandsoulx/vfang-razer-linux/issues/7):
+  static RGB packet checks passed, but the modified Blade's green-only lighting
+  remains unconfirmed on hardware; no hardware fix is claimed.
+- Issue [#8](https://github.com/bladeandsoulx/vfang-razer-linux/issues/8):
+  confirmed battery settings survived fresh screen renders and a mock-daemon
+  restart. These checks and the improved error reporting do not establish a
+  fix for the affected machine's firmware or physical charging behavior.
+- Manual UI interaction, actual GPU power savings and fan/battery/lighting
+  behavior still require desktop-session and physical-device checks. Actual
+  package installation/removal belongs in disposable validation environments.
+- GLib retains its upstream 0.18.5 version for compatibility, so version-only
+  scans may continue to report RUSTSEC-2024-0429 despite the source backport.
+  Transitive maintenance advisories remain. Package installation is not an atomic
+  multi-package rollback, even though both builds finish before it starts.
+
 ## [0.9.9] — 2026-08-08 — Arch-family packages
 
 ### Added

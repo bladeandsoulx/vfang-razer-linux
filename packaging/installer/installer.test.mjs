@@ -709,24 +709,32 @@ test('downloads and installs only the pinned Pacman pair on Arch', () => {
 });
 
 test('rejects malformed checksum manifests before sudo', () => {
+  const marker = `.fang-manifest-injection-${process.pid}`;
+  fs.rmSync(marker, { force: true });
   const transformations = [
     (value) => value.split('\n').slice(1).join('\n'),
     (value) => `${value}${value.split('\n')[0]}\n`,
     (value) => value.replace(/^[a-f0-9]{64}/, 'BAD'),
     (value) => value.replace('install.sh', '../install.sh'),
+    (value) => value.replace('install.sh', `$(touch ${marker})`),
     (value) => `${value}${'b'.repeat(64)}  seventh.asset\n`,
     (value) => value.trimEnd()
   ];
-  for (const manifestTransform of transformations) {
-    const fixture = makeFixture({
-      osRelease: 'ID=ubuntu\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\n',
-      manifestTransform
-    });
-    const result = fixture.run();
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /checksum manifest/i);
-    assert.doesNotMatch(fixture.commands(), /^sudo /m);
-    fixture.cleanup();
+  try {
+    for (const manifestTransform of transformations) {
+      const fixture = makeFixture({
+        osRelease: 'ID=ubuntu\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\n',
+        manifestTransform
+      });
+      const result = fixture.run();
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /checksum manifest/i);
+      assert.doesNotMatch(fixture.commands(), /^sudo /m);
+      fixture.cleanup();
+    }
+    assert.equal(fs.existsSync(marker), false, 'an untrusted manifest name must stay inert');
+  } finally {
+    fs.rmSync(marker, { force: true });
   }
 });
 

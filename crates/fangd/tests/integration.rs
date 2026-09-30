@@ -90,6 +90,21 @@ fn version_flag_exits_without_creating_runtime_state() {
 }
 
 #[test]
+fn missing_tcp_address_fails_before_server_startup() {
+    let bin = env!("CARGO_BIN_EXE_fangd");
+    // --mock ensures a regression cannot open a real EC backend. The next
+    // option also makes the old parser fail validation before binding a socket.
+    let output = Command::new(bin)
+        .args(["--mock", "--tcp", "--restore-auto"])
+        .output()
+        .expect("run fangd with a missing mock TCP address");
+
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("--tcp requires a value"), "{stderr}");
+}
+
+#[test]
 fn daemon_end_to_end() {
     let dir = std::env::temp_dir().join(format!("fangd-test-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
@@ -208,6 +223,11 @@ fn daemon_end_to_end() {
             assert!(v["data"]["fan_rpm"].as_array().is_some());
             assert!(v["data"]["fan_target_rpm"].as_u64().is_some());
             assert_eq!(v["data"]["thermal_override_active"], false);
+            assert_eq!(v["data"]["gpu_asleep"], false);
+            let igpu_activity = v["data"]["igpu_active_pct"].as_f64().unwrap();
+            assert!((0.0..=100.0).contains(&igpu_activity));
+            assert!(v["data"]["igpu_power_w"].as_f64().unwrap() >= 0.0);
+            assert!(v["data"]["igpu_freq_mhz"].as_u64().unwrap() > 0);
             assert_eq!(v["data"]["thermal_sensor_ok"], true);
             assert!(v["data"]["thermal_override_reason"].is_null());
             got_telemetry = true;

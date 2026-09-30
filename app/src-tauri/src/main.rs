@@ -3,6 +3,11 @@
 mod client;
 mod display;
 mod panel;
+// Session display helpers need the same output and process-group bounds as
+// daemon helpers. Share the implementation rather than a second timeout loop.
+#[cfg(target_os = "linux")]
+#[path = "../../../crates/fangd/src/process.rs"]
+mod process;
 mod window;
 
 use client::Client;

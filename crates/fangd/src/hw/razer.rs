@@ -223,7 +223,13 @@ where
                     b => b,
                 }
             };
-            Some((cpu, state.gpu_boost))
+            // The EC's overclock level is CPU-only. Keep malformed internal
+            // state from ever sending level 3 to the GPU zone.
+            let gpu = match state.gpu_boost {
+                Boost::Boost => Boost::High,
+                b => b,
+            };
+            Some((cpu, gpu))
         }
         _ => None,
     };
@@ -356,6 +362,8 @@ impl Hw for RazerHw {
             gpu_temp_c: r.gpu_temp_c,
             cpu_power_w: r.cpu_power_w,
             gpu_power_w: r.gpu_power_w,
+            gpu_asleep: r.gpu_asleep,
+            igpu: r.igpu,
             fan_rpm,
         }
     }
@@ -408,6 +416,8 @@ impl Hw for MonitorOnly {
             gpu_temp_c: r.gpu_temp_c,
             cpu_power_w: r.cpu_power_w,
             gpu_power_w: r.gpu_power_w,
+            gpu_asleep: r.gpu_asleep,
+            igpu: r.igpu,
             fan_rpm: vec![],
         }
     }
@@ -420,7 +430,7 @@ mod tests {
         restore_auto_commands,
     };
     use crate::state::AppliedState;
-    use fang_protocol::api::{FanMode, PerfMode};
+    use fang_protocol::api::{Boost, FanMode, PerfMode};
     use fang_protocol::models;
     use fang_protocol::packet::{Report, Zone};
 
@@ -496,6 +506,29 @@ mod tests {
             fan: FanMode::Manual { rpm: 3000 },
             ..AppliedState::default()
         }
+    }
+
+    #[test]
+    fn gpu_overclock_state_is_capped_before_ec_write() {
+        let state = AppliedState {
+            perf_mode: PerfMode::Custom,
+            gpu_boost: Boost::Boost,
+            ..AppliedState::default()
+        };
+        let mut reports = Vec::new();
+        apply_state_once(&state, &models::FALLBACK, &mut |report| {
+            reports.push(report);
+            Ok(())
+        })
+        .unwrap();
+
+        let gpu_boost = reports
+            .iter()
+            .find(|report| {
+                report.command_class == 0x0d && report.command_id == 0x07 && report.args[1] == 0x02
+            })
+            .expect("custom mode must set GPU boost");
+        assert_eq!(gpu_boost.args[2], Boost::High.to_ec());
     }
 
     fn assert_auto_report(report: &Report, zone: Zone) {

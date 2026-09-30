@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   checksumNames,
@@ -15,9 +16,10 @@ import {
   validateManifest
 } from './release-contract.mjs';
 
-const repositoryRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const sourceInstaller = path.join(repositoryRoot, 'packaging/install-from-source.sh');
 const read = (name) => fs.readFileSync(path.join(repositoryRoot, name), 'utf8');
+const posixSubprocess = process.platform !== 'win32';
 
 function runSourceFamilyGuard(osRelease) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-source-installer-test-'));
@@ -57,7 +59,7 @@ test('0.9.9 owns eight exact assets and seven checksum entries', () => {
 test('0.9.7 rebrand preserves its historical branding', () => {
   assert.match(read('packaging/install-from-source.sh'), /building the VFang app/);
   assert.match(read('packaging/install-from-source.sh'), /Launch 'VFang'/);
-  assert.match(read('packaging/install-from-source.sh'), /Fang_\$\{VERSION\}_amd64\.deb/);
+  assert.match(read('packaging/install-from-source.sh'), /Fang_\$\{version\}_amd64\.deb/);
   assert.match(read('packaging/release/release-contract.mjs'), /Staged immutable VFang/);
 });
 
@@ -133,7 +135,9 @@ test('Pacman metadata inspector extracts the sole raw .PKGINFO member', () => {
   ]);
 });
 
-test('Pacman metadata inspector preserves raw trailing bytes from its default command path', () => {
+test('Pacman metadata inspector preserves raw trailing bytes from its default command path', {
+  skip: !posixSubprocess
+}, () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fang-pacman-inspect-'));
   const bin = path.join(root, 'bin');
   const bsdtar = path.join(bin, 'bsdtar');
@@ -329,7 +333,9 @@ test('stage CLI accepts the Arch directory before the output directory', () => {
   fs.rmSync(root, { recursive: true });
 });
 
-test('source installer accepts valid direct and derived Debian-family os-release quoting', () => {
+test('source installer accepts valid direct and derived Debian-family os-release quoting', {
+  skip: !posixSubprocess
+}, () => {
   for (const osRelease of [
     "ID='ubuntu'\n",
     'ID="debian"\n',
@@ -340,7 +346,9 @@ test('source installer accepts valid direct and derived Debian-family os-release
   }
 });
 
-test('source installer rejects malformed, duplicate, and unsupported family data', () => {
+test('source installer rejects malformed, duplicate, and unsupported family data', {
+  skip: !posixSubprocess
+}, () => {
   const marker = path.join(os.tmpdir(), `fang-source-installer-injection-${process.pid}`);
   fs.rmSync(marker, { force: true });
   for (const osRelease of [
@@ -356,12 +364,14 @@ test('source installer rejects malformed, duplicate, and unsupported family data
 });
 
 test('documentation exposes release, review, integrity, manual, and source install paths', () => {
+  const version = JSON.parse(read('app/package.json')).version;
+  const escapedVersion = version.replace(/\./g, '\\.');
   const readme = fs.readFileSync(path.join(repositoryRoot, 'README.md'), 'utf8');
   const contributing = fs.readFileSync(path.join(repositoryRoot, 'CONTRIBUTING.md'), 'utf8');
   const hardware = fs.readFileSync(path.join(repositoryRoot, 'HARDWARE_TESTING.md'), 'utf8');
 
   assert.equal(fs.existsSync(path.join(repositoryRoot, 'packaging/install.sh')), false);
-  assert.ok(fs.statSync(sourceInstaller).mode & 0o111);
+  if (posixSubprocess) assert.ok(fs.statSync(sourceInstaller).mode & 0o111);
   assert.match(readme, /## Install — one command/);
   assert.match(
     readme,
@@ -374,14 +384,14 @@ test('documentation exposes release, review, integrity, manual, and source insta
   );
   assert.match(readme, /curl -fLO .*releases\/latest\/download\/install\.sh/);
   assert.match(readme, /less install\.sh\nbash install\.sh/);
-  assert.match(readme, /releases\/download\/v0\.9\.9\/\{install\.sh,SHA256SUMS\}/);
+  assert.ok(readme.includes(`releases/download/v${version}/{install.sh,SHA256SUMS}`));
   assert.match(
     readme,
-    /sudo apt install \.\/fangd_0\.9\.9-1_amd64\.deb \.\/Fang_0\.9\.9_amd64\.deb/
+    new RegExp(`sudo apt install \\.\\/fangd_${escapedVersion}-1_amd64\\.deb \\.\\/Fang_${escapedVersion}_amd64\\.deb`)
   );
   assert.match(
     readme,
-    /sudo dnf install \.\/fangd-0\.9\.9-1\.x86_64\.rpm \.\/fang-0\.9\.9-1\.x86_64\.rpm/
+    new RegExp(`sudo dnf install \\.\\/fangd-${escapedVersion}-1\\.x86_64\\.rpm \\.\\/fang-${escapedVersion}-1\\.x86_64\\.rpm`)
   );
   assert.match(readme, /sha256sum --check .*install\.sh/);
   assert.match(readme, /^- Ubuntu 22\.04, 24\.04, and 26\.04$/m);
@@ -392,9 +402,9 @@ test('documentation exposes release, review, integrity, manual, and source insta
   assert.match(readme, /sudo pacman -Syu/);
   assert.match(
     readme,
-    /sudo pacman -U \.\/fangd-0\.9\.9-1-x86_64\.pkg\.tar\.zst/
+    new RegExp(`sudo pacman -U \\.\\/fangd-${escapedVersion}-1-x86_64\\.pkg\\.tar\\.zst`)
   );
-  assert.match(readme, /\.\/fang-0\.9\.9-1-x86_64\.pkg\.tar\.zst/);
+  assert.ok(readme.includes(`./fang-${version}-1-x86_64.pkg.tar.zst`));
   assert.match(readme, /sudo pacman -Rns fang fangd/);
   assert.match(readme, /do not add `sudo`/);
   assert.match(readme, /refuses downgrades/i);
@@ -414,7 +424,7 @@ test('documentation exposes release, review, integrity, manual, and source insta
     assert.match(content, /\bVFang\b/, name);
     assert.doesNotMatch(content, /\bFang\b/, name);
   }
-  assert.match(readme, /Fang_0\.9\.9_amd64\.deb/);
+  assert.ok(readme.includes(`Fang_${version}_amd64.deb`));
   assert.match(readme, /bladeandsoulx\/vfang-razer-linux/);
   assert.match(contributing, /read-only.*Administration|Administration.*read-only/is);
   assert.match(hardware, /packaging\/install-from-source\.sh/);

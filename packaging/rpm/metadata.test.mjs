@@ -68,3 +68,11 @@ test('packaging presents VFang while retaining every technical identity', () => 
   assert.match(daemonSpec, /^Summary:.*VFang$/m);
   assert.match(read('packaging/fangd.service'), /^Description=VFang daemon/m);
 });
+
+test('RPM verifier refuses to replace existing packages before lifecycle changes', () => {
+  const verify = read('packaging/rpm/verify.sh');
+  const preflight = verify.indexOf('rpm -q "$package"');
+  const install = verify.indexOf('dnf install -y "$fangd" "$fang"');
+  assert.ok(preflight >= 0 && preflight < install);
+  assert.match(verify, /refusing to run.*existing.*use a disposable container/i);
+});

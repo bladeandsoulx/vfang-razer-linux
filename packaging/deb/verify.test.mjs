@@ -38,6 +38,14 @@ test('DEB verifier covers install, runtime, integrity, and removal lifecycle', (
   assert.match(source, /packaged file remains after removal/);
 });
 
+test('DEB verifier refuses to replace existing packages before lifecycle changes', () => {
+  const source = fs.readFileSync(verifierPath, 'utf8');
+  const preflight = source.indexOf("dpkg-query -W -f='${Status}' \"$package\"");
+  const install = source.indexOf('apt-get install -y "$fangd" "$fang"');
+  assert.ok(preflight >= 0 && preflight < install);
+  assert.match(source, /refusing to run.*existing.*use a disposable container/i);
+});
+
 test('CI and release test one DEB pair on all five supported bases', () => {
   const images = ['ubuntu:22.04', 'ubuntu:24.04', 'ubuntu:26.04', 'debian:12', 'debian:13'];
   for (const workflow of workflows) {

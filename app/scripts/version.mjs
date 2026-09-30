@@ -12,7 +12,6 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const file = (name) => path.join(root, name);
 const read = (name) => fs.readFileSync(file(name), 'utf8');
-const write = (name, value) => fs.writeFileSync(file(name), value);
 
 function capture(label, text, pattern) {
   const match = text.match(pattern);
@@ -267,6 +266,10 @@ function check() {
 }
 
 function setVersion(version) {
+  // Validate every input and replacement before updating any release file.
+  // A malformed late input must not leave earlier components on a new version.
+  const updates = new Map();
+  const write = (name, value) => updates.set(name, value);
   if (!/^\d+\.\d+\.\d+$/.test(version)) {
     throw new Error('version must be MAJOR.MINOR.PATCH');
   }
@@ -352,6 +355,8 @@ function setVersion(version) {
     '$1' + version + '$2'
   );
   write('packaging/installer/banner.txt', text);
+
+  for (const [name, value] of updates) fs.writeFileSync(file(name), value);
 
   console.log('Updated manifests and lockfiles to ' + version + '.');
   console.log('Update CHANGELOG.md, then run this script with check.');

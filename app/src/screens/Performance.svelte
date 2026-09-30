@@ -2,6 +2,7 @@
   import ModeCard from '../lib/components/ModeCard.svelte';
   import { status, telemetry } from '../lib/stores.js';
   import { setPerfMode, setAutoPower } from '../lib/bridge.js';
+  import { createCommandRunner } from '../lib/command-runner.js';
 
   const MODES = [
     { mode: 'silent', title: 'Silent', icon: 'power', blurb: 'Lowest fan noise, capped power. For late nights and libraries.' },
@@ -13,27 +14,35 @@
   const CPU_LEVELS = ['low', 'medium', 'high', 'boost'];
   const GPU_LEVELS = ['low', 'medium', 'high'];
 
+  let commandBusy = false;
+  let commandError = '';
+  const commands = createCommandRunner(({ busy, error }) => {
+    commandBusy = busy;
+    commandError = error;
+  });
+
   $: cpuLevels = $status?.has_cpu_boost_oc ? CPU_LEVELS : CPU_LEVELS.slice(0, 3);
   const modes = MODES;
 
   function select(e) {
     const mode = e.detail;
-    setPerfMode(mode, $status?.cpu_boost, $status?.gpu_boost);
+    void commands.run(() => setPerfMode(mode, $status?.cpu_boost, $status?.gpu_boost));
   }
 
   function setCpu(level) {
-    setPerfMode('custom', level, $status?.gpu_boost);
+    void commands.run(() => setPerfMode('custom', level, $status?.gpu_boost));
   }
 
   function setGpu(level) {
-    setPerfMode('custom', $status?.cpu_boost, level);
+    void commands.run(() => setPerfMode('custom', $status?.cpu_boost, level));
   }
 
   // ---- power-source automation -------------------------------------------
   const AUTO_MODES = [
     { mode: 'silent', title: 'Silent' },
     { mode: 'balanced', title: 'Balanced' },
-    { mode: 'gaming', title: 'Gaming' }
+    { mode: 'gaming', title: 'Gaming' },
+    { mode: 'custom', title: 'Custom' }
   ];
   const autoModes = AUTO_MODES;
 
@@ -51,12 +60,15 @@
 
   // Merge one field into the current config and re-send the whole thing.
   function commit(patch) {
-    setAutoPower(
-      patch.enabled ?? auto,
-      patch.ac ?? acProfile,
-      patch.battery ?? batteryProfile,
-      patch.acFan ?? acFan,
-      patch.batteryFan ?? batteryFan
+    if (commands.busy) return;
+    void commands.run(() =>
+      setAutoPower(
+        patch.enabled ?? auto,
+        patch.ac ?? acProfile,
+        patch.battery ?? batteryProfile,
+        patch.acFan ?? acFan,
+        patch.batteryFan ?? batteryFan
+      )
     );
   }
   const toggleAuto = (on) => commit({ enabled: on });
@@ -68,19 +80,32 @@
 
 <div class="cards">
   {#each modes as m, i (m.mode)}
-    <ModeCard {...m} active={$status?.perf_mode === m.mode} delay={i * 45} on:select={select} />
+    <ModeCard
+      {...m}
+      active={$status?.perf_mode === m.mode}
+      disabled={commandBusy}
+      delay={i * 45}
+      on:select={select}
+    />
   {/each}
 </div>
+
+{#if commandError}
+  <p class="command-error" role="alert">Could not apply the change: {commandError}</p>
+{/if}
+{#if commandBusy}<p class="command-pending" role="status">Applying change…</p>{/if}
 
 {#if $status?.perf_mode === 'custom'}
   <div class="boosts card rise">
     <div class="group">
       <span class="card-label">CPU power</span>
-      <div class="seg">
+      <div class="seg" role="group" aria-label="CPU power level">
         {#each cpuLevels as level}
           <button
             class:on={$status.cpu_boost === level}
             class:oc={level === 'boost'}
+            aria-pressed={$status.cpu_boost === level}
+            disabled={commandBusy}
             on:click={() => setCpu(level)}>{level}</button
           >
         {/each}
@@ -88,9 +113,13 @@
     </div>
     <div class="group">
       <span class="card-label">GPU power</span>
-      <div class="seg">
+      <div class="seg" role="group" aria-label="GPU power level">
         {#each GPU_LEVELS as level}
-          <button class:on={$status.gpu_boost === level} on:click={() => setGpu(level)}
+          <button
+            class:on={$status.gpu_boost === level}
+            aria-pressed={$status.gpu_boost === level}
+            disabled={commandBusy}
+            on:click={() => setGpu(level)}
             >{level}</button
           >
         {/each}
@@ -108,9 +137,19 @@
       <span class="card-label">Power automation</span>
       <p class="sub">Switch profile automatically when you plug in or unplug.</p>
     </div>
-    <div class="seg">
-      <button class:on={!auto} on:click={() => toggleAuto(false)}>Off</button>
-      <button class:on={auto} on:click={() => toggleAuto(true)}>On</button>
+    <div class="seg" role="group" aria-label="Power automation">
+      <button
+        class:on={!auto}
+        aria-pressed={!auto}
+        disabled={commandBusy}
+        on:click={() => toggleAuto(false)}>Off</button
+      >
+      <button
+        class:on={auto}
+        aria-pressed={auto}
+        disabled={commandBusy}
+        on:click={() => toggleAuto(true)}>On</button
+      >
     </div>
   </div>
 
@@ -121,16 +160,31 @@
         {#if source === 'ac'}<em class="cur">now</em>{/if}
       </span>
       <div class="opts">
-        <div class="seg">
+        <div class="seg" role="group" aria-label="AC power profile">
           {#each autoModes as m}
-            <button class:on={acProfile === m.mode} on:click={() => pickAc(m.mode)}>{m.title}</button>
+            <button
+              class:on={acProfile === m.mode}
+              aria-pressed={acProfile === m.mode}
+              disabled={commandBusy}
+              on:click={() => pickAc(m.mode)}>{m.title}</button
+            >
           {/each}
         </div>
         <div class="fanpick">
           <span class="fanlbl">fan</span>
-          <div class="seg">
-            <button class:on={!acFanQuiet} on:click={() => pickAcFan('auto')}>Auto</button>
-            <button class:on={acFanQuiet} on:click={() => pickAcFan('quiet')}>Quiet</button>
+          <div class="seg" role="group" aria-label="AC fan profile">
+            <button
+              class:on={!acFanQuiet}
+              aria-pressed={!acFanQuiet}
+              disabled={commandBusy}
+              on:click={() => pickAcFan('auto')}>Auto</button
+            >
+            <button
+              class:on={acFanQuiet}
+              aria-pressed={acFanQuiet}
+              disabled={commandBusy}
+              on:click={() => pickAcFan('quiet')}>Quiet</button
+            >
           </div>
         </div>
       </div>
@@ -141,23 +195,40 @@
         {#if source === 'battery'}<em class="cur">now</em>{/if}
       </span>
       <div class="opts">
-        <div class="seg">
+        <div class="seg" role="group" aria-label="Battery power profile">
           {#each autoModes as m}
-            <button class:on={batteryProfile === m.mode} on:click={() => pickBattery(m.mode)}>
+            <button
+              class:on={batteryProfile === m.mode}
+              aria-pressed={batteryProfile === m.mode}
+              disabled={commandBusy}
+              on:click={() => pickBattery(m.mode)}>
               {m.title}
             </button>
           {/each}
         </div>
         <div class="fanpick">
           <span class="fanlbl">fan</span>
-          <div class="seg">
-            <button class:on={!batteryFanQuiet} on:click={() => pickBatteryFan('auto')}>Auto</button>
-            <button class:on={batteryFanQuiet} on:click={() => pickBatteryFan('quiet')}>Quiet</button>
+          <div class="seg" role="group" aria-label="Battery fan profile">
+            <button
+              class:on={!batteryFanQuiet}
+              aria-pressed={!batteryFanQuiet}
+              disabled={commandBusy}
+              on:click={() => pickBatteryFan('auto')}>Auto</button
+            >
+            <button
+              class:on={batteryFanQuiet}
+              aria-pressed={batteryFanQuiet}
+              disabled={commandBusy}
+              on:click={() => pickBatteryFan('quiet')}>Quiet</button
+            >
           </div>
         </div>
       </div>
     </div>
   </div>
+  {#if acProfile === 'custom' || batteryProfile === 'custom'}
+    <p class="note">Custom automation uses your saved CPU and GPU power levels. Select Custom above to adjust them.</p>
+  {/if}
 </div>
 
 <style>
@@ -165,6 +236,18 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: 14px;
+  }
+
+  .command-error {
+    margin-top: 12px;
+    color: var(--red);
+    font-size: 11.5px;
+  }
+
+  .command-pending {
+    margin-top: 10px;
+    color: var(--ink-dim);
+    font-size: 11.5px;
   }
 
   .boosts {
@@ -206,6 +289,11 @@
 
   .seg button:hover {
     color: var(--ink);
+  }
+
+  .seg button:disabled {
+    cursor: wait;
+    opacity: 0.65;
   }
 
   .seg button.on {

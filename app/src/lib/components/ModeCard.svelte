@@ -8,6 +8,7 @@
   export let icon;
   export let active = false;
   export let delay = 0;
+  export let disabled = false;
 
   const dispatch = createEventDispatcher();
 </script>
@@ -15,6 +16,8 @@
 <button
   class="mode card rise"
   class:active
+  disabled={disabled}
+  aria-pressed={active}
   style="animation-delay:{delay}ms"
   on:click={() => dispatch('select', mode)}
 >
@@ -38,6 +41,12 @@
   .mode:hover {
     transform: translateY(-2px);
     border-color: var(--panel-edge-hi);
+  }
+
+  .mode:disabled {
+    cursor: wait;
+    opacity: 0.7;
+    transform: none;
   }
 
   .mode.active {

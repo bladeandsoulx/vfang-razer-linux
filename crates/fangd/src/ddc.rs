@@ -179,7 +179,7 @@ impl Ddc {
             return Err("this monitor doesn't expose brightness over DDC/CI".into());
         }
         let display = self.display.ok_or("no external DDC/CI monitor")?;
-        let raw = (percent as u32 * self.bright_max / 100).min(self.bright_max);
+        let raw = scale_brightness(percent, self.bright_max).min(self.bright_max);
         if ddcutil(&["-d", &display.to_string(), "setvcp", "10", &raw.to_string()]).is_none() {
             self.invalidate();
             return Err(
@@ -276,15 +276,50 @@ fn read_brightness(display: u8) -> (Option<u8>, u32) {
     let Some(out) = ddcutil(&["-d", &display.to_string(), "getvcp", "10", "--brief"]) else {
         return (None, 100);
     };
+    parse_brightness(&out)
+}
+
+fn scale_brightness(percent: u8, max: u32) -> u32 {
+    (u64::from(percent.min(100)) * u64::from(max) / 100) as u32
+}
+
+fn parse_brightness(out: &str) -> (Option<u8>, u32) {
     // Tokens: "VCP" "10" "C" <cur> <max>; the decimals are [10, cur, max].
     let nums: Vec<u32> = out
         .split_whitespace()
         .filter_map(|t| t.parse().ok())
         .collect();
-    if let [.., cur, max] = nums[..] {
-        if let Some(pct) = (cur * 100).checked_div(max) {
-            return (Some(pct.min(100) as u8), max);
+    if let [.., cur, max] = nums.as_slice() {
+        if *max > 0 && *cur <= *max {
+            let pct = u64::from(*cur) * 100 / u64::from(*max);
+            return (Some(pct.min(100) as u8), *max);
         }
     }
     (None, 100)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_brightness, scale_brightness};
+
+    #[test]
+    fn brightness_parser_handles_full_u32_range_without_overflow() {
+        assert_eq!(
+            parse_brightness("VCP 10 C 4294967295 4294967295"),
+            (Some(100), u32::MAX)
+        );
+    }
+
+    #[test]
+    fn brightness_scaling_handles_full_u32_range_without_overflow() {
+        assert_eq!(scale_brightness(100, u32::MAX), u32::MAX);
+        assert_eq!(scale_brightness(50, u32::MAX), u32::MAX / 2);
+        assert_eq!(scale_brightness(255, 200), 200);
+    }
+
+    #[test]
+    fn brightness_parser_rejects_impossible_ranges() {
+        assert_eq!(parse_brightness("VCP 10 C 1 0"), (None, 100));
+        assert_eq!(parse_brightness("VCP 10 C 101 100"), (None, 100));
+    }
 }

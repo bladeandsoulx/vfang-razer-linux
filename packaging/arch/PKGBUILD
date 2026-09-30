@@ -1,8 +1,8 @@
 pkgbase=vfang
 pkgname=(fang fangd)
-pkgver=0.9.9
+pkgver=1.0.0
 pkgrel=1
-_fangd_upper=0.10.0
+_fangd_upper=1.1.0
 pkgdesc='Razer Blade control center and privileged hardware daemon'
 arch=(x86_64)
 url='https://github.com/bladeandsoulx/vfang-razer-linux'

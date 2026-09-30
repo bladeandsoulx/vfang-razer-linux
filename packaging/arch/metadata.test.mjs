@@ -66,3 +66,11 @@ test('lifecycle verifier does not require the build-only Node runtime', () => {
   assert.doesNotMatch(verify, /\bnode\b/);
   assert.match(verify, /packaging\/arch\/PKGBUILD/);
 });
+
+test('Pacman verifier refuses to replace existing packages before lifecycle changes', () => {
+  const verify = read('packaging/arch/verify.sh');
+  const preflight = verify.indexOf('pacman -Q -- "$package"');
+  const install = verify.indexOf('pacman -U --noconfirm "$fangd" "$fang"');
+  assert.ok(preflight >= 0 && preflight < install);
+  assert.match(verify, /refusing to run.*existing.*use a disposable container/i);
+});

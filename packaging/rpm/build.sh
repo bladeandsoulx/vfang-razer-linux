@@ -3,6 +3,15 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUTPUT="${1:-$ROOT/target/rpm-dist}"
+[[ $OUTPUT == /* ]] || OUTPUT="$ROOT/$OUTPUT"
+mkdir -p "$OUTPUT"
+require_empty_output() {
+  if [[ -n $(find "$OUTPUT" -maxdepth 1 -name '*.rpm' -print -quit) ]]; then
+    echo "package output directory already contains RPM artifacts; choose an empty directory: $OUTPUT" >&2
+    return 1
+  fi
+}
+require_empty_output
 TOPDIR="$(mktemp -d)"
 trap 'rm -rf "$TOPDIR"' EXIT
 
@@ -15,7 +24,7 @@ done
 
 cd "$ROOT"
 node app/scripts/version.mjs check
-cargo build --release -p fangd
+cargo build --release --locked -p fangd
 (
   cd app
   npm ci
@@ -37,8 +46,6 @@ install -pm0644 app/src-tauri/icons/icon.png "$TOPDIR/SOURCES/fang-512.png"
 rpmbuild --define "_topdir $TOPDIR" -bb packaging/rpm/fangd.spec
 rpmbuild --define "_topdir $TOPDIR" -bb packaging/rpm/fang.spec
 
-mkdir -p "$OUTPUT"
-find "$OUTPUT" -maxdepth 1 -type f -name '*.rpm' -delete
 mapfile -t built < <(find "$TOPDIR/RPMS" -type f -name '*.rpm' -print | sort)
 [[ "${#built[@]}" -eq 2 ]] || {
   printf 'expected two RPMs, found %s\n' "${#built[@]}" >&2
@@ -57,9 +64,12 @@ for package in "${built[@]}"; do
     exit 1
   }
   seen[$name]=1
-  install -pm0644 "$package" "$OUTPUT/"
 done
 
 [[ -n "${seen[fang]:-}" && -n "${seen[fangd]:-}" ]]
+require_empty_output
+for package in "${built[@]}"; do
+  install -pm0644 "$package" "$OUTPUT/"
+done
 printf 'RPM artifacts:\n'
 find "$OUTPUT" -maxdepth 1 -type f -name '*.rpm' -printf '%f\n' | sort

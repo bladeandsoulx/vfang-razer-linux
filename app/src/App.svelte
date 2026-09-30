@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from 'svelte';
   import Icon from './lib/components/Icon.svelte';
   import Dashboard from './screens/Dashboard.svelte';
   import Performance from './screens/Performance.svelte';
@@ -9,8 +10,8 @@
   import Support from './screens/Support.svelte';
   import Settings from './screens/Settings.svelte';
   import Disconnected from './screens/Disconnected.svelte';
-  import { connected, status, versionInfo } from './lib/stores.js';
-  import { inTauri } from './lib/bridge.js';
+  import { connected, status, versionInfo, bridgeErrors } from './lib/stores.js';
+  import { inTauri, retryBridgeInit } from './lib/bridge.js';
 
   const SCREENS = [
     { id: 'dashboard', title: 'Dashboard', icon: 'dashboard', component: Dashboard },
@@ -24,12 +25,32 @@
   ];
 
   // #dashboard / #performance / #fan / #support / #settings deep-link the screens
-  let current =
-    SCREENS.find((s) => s.id === location.hash.replace('#', '')) ?? SCREENS[0];
+  const screenForHash = (hash) =>
+    SCREENS.find((s) => s.id === hash.replace(/^#/, '')) ?? SCREENS[0];
+  let current = screenForHash(location.hash);
+  let bridgeRetryBusy = false;
+
+  onMount(() => {
+    const syncScreen = () => {
+      current = screenForHash(location.hash);
+    };
+    window.addEventListener('hashchange', syncScreen);
+    return () => window.removeEventListener('hashchange', syncScreen);
+  });
 
   function nav(s) {
     current = s;
     location.hash = s.id;
+  }
+
+  async function retryBridge() {
+    if (bridgeRetryBusy) return;
+    bridgeRetryBusy = true;
+    try {
+      await retryBridgeInit();
+    } finally {
+      bridgeRetryBusy = false;
+    }
   }
 </script>
 
@@ -42,9 +63,12 @@
       <span class="word">VFANG</span>
     </div>
 
-    <nav>
+    <nav aria-label="Primary navigation">
       {#each SCREENS as s}
-        <button class:on={current.id === s.id} on:click={() => nav(s)}>
+        <button
+          class:on={current.id === s.id}
+          aria-current={current.id === s.id ? 'page' : undefined}
+          on:click={() => nav(s)}>
           <Icon name={s.icon} size={18} />
           <span>{s.title}</span>
         </button>
@@ -84,6 +108,18 @@
       Hardware changes are blocked until they match.
     </div>
   {/if}
+
+  {#if inTauri && $bridgeErrors.length}
+    <div class="bridge-errors" role="alert">
+      <strong>Some VFang data could not be loaded.</strong>
+      {#each $bridgeErrors as issue (issue.command)}
+        <p>{issue.command}: {issue.message}</p>
+      {/each}
+      <button type="button" disabled={bridgeRetryBusy} on:click={retryBridge}>
+        {bridgeRetryBusy ? 'Retrying…' : 'Retry'}
+      </button>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -108,6 +144,36 @@
     background: rgba(35, 12, 14, 0.96);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
     font-size: 12px;
+  }
+
+  .bridge-errors {
+    position: fixed;
+    z-index: 60;
+    top: 18px;
+    right: 18px;
+    width: min(440px, calc(100vw - var(--rail-w) - 36px));
+    padding: 14px 16px;
+    border: 1px solid rgba(255, 180, 84, 0.4);
+    border-radius: 8px;
+    color: var(--amber);
+    background: rgba(30, 23, 14, 0.97);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+    font-size: 12px;
+  }
+
+  .bridge-errors p {
+    margin-top: 6px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .bridge-errors button {
+    margin-top: 10px;
+    padding: 7px 11px;
+    border: 1px solid rgba(255, 180, 84, 0.4);
+    border-radius: 6px;
+    color: var(--amber);
+    background: rgba(255, 180, 84, 0.08);
   }
 
   .compatibility strong {

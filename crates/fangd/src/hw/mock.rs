@@ -3,7 +3,7 @@
 //! Temperatures drift toward a load level implied by the performance mode,
 //! and fans ease toward their target RPM, so the UI shows plausible motion.
 
-use super::{Hw, ModelInfo, Sample};
+use super::{Hw, IgpuReading, ModelInfo, Sample};
 use crate::state::AppliedState;
 use fang_protocol::api::{FanMode, PerfMode};
 use std::time::Instant;
@@ -116,6 +116,12 @@ impl Hw for MockHw {
             gpu_temp_c: Some(self.gpu_temp),
             cpu_power_w: Some(cpu_w + wiggle),
             gpu_power_w: Some(gpu_w + wiggle * 1.4),
+            gpu_asleep: false,
+            igpu: IgpuReading {
+                active_pct: Some((18.0 + wiggle * 4.0).max(0.0)),
+                power_w: Some(3.2 + wiggle * 0.3),
+                freq_mhz: Some(1_600),
+            },
             fan_rpm: self.rpm.iter().map(|r| *r as u32).collect(),
         }
     }

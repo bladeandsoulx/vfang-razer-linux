@@ -26,6 +26,7 @@ jobs:
       - run: node app/scripts/version.mjs check
       - run: node --test app/scripts/version.test.mjs
       - run: node --test packaging/installer/check-os-release.test.mjs
+      - run: node --test packaging/installer/source-install.test.mjs packaging/installer/package-output.test.mjs
       - run: node packaging/installer/installer.test.mjs
       - run: node packaging/release/release-contract.test.mjs
       - run: node packaging/release/publish.test.mjs

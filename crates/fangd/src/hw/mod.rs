@@ -6,6 +6,8 @@ use fang_protocol::api::PerfMode;
 pub mod mock;
 #[cfg(target_os = "linux")]
 pub mod razer;
+#[cfg(any(target_os = "linux", test))]
+pub mod runtime_pm;
 #[cfg(target_os = "linux")]
 pub mod sensors;
 
@@ -22,12 +24,26 @@ pub struct ModelInfo {
     pub has_logo: bool,
 }
 
+/// Integrated-GPU telemetry values. Hardware backends may leave unsupported
+/// readings unavailable while the simulator supplies plausible values.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct IgpuReading {
+    /// Share of the sample interval the render engine spent awake, 0..=100.
+    pub active_pct: Option<f32>,
+    /// Uncore power used as an iGPU proxy where the platform exposes it.
+    pub power_w: Option<f32>,
+    /// Current or requested render-engine frequency in MHz.
+    pub freq_mhz: Option<u32>,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Sample {
     pub cpu_temp_c: Option<f32>,
     pub gpu_temp_c: Option<f32>,
     pub cpu_power_w: Option<f32>,
     pub gpu_power_w: Option<f32>,
+    pub gpu_asleep: bool,
+    pub igpu: IgpuReading,
     pub fan_rpm: Vec<u32>,
 }
 

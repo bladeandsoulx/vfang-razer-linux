@@ -4,33 +4,42 @@
   import { status, uiSettings, connected, versionInfo } from '../lib/stores.js';
   import { saveUiSettings, setBho, openExternal, inTauri } from '../lib/bridge.js';
   import { checkForUpdate } from '../lib/updater.js';
+  import { createCommandRunner } from '../lib/command-runner.js';
 
   let slider = null; // local slider position before release
   let updateStatus = 'idle';
   let updateInfo = null;
   let settingsError = '';
+  let settingsBusy = false;
+  let bhoBusy = false;
+  let bhoError = '';
+  const settingsCommands = createCommandRunner(({ busy, error }) => {
+    settingsBusy = busy;
+    settingsError = error ? `Could not save application settings: ${error}` : '';
+  });
+  const bhoCommands = createCommandRunner(({ busy, error }) => {
+    bhoBusy = busy;
+    bhoError = error;
+  });
 
   $: bhoOn = $status?.bho_enabled ?? false;
   $: threshold = slider ?? $status?.bho_threshold ?? 80;
   $: fill = ((threshold - 50) / 30) * 100;
 
-  async function save(field, checked) {
-    settingsError = '';
-    try {
-      await saveUiSettings({ ...$uiSettings, [field]: checked });
-    } catch (error) {
-      console.error('save UI settings', error);
-      settingsError = `Could not save application settings: ${error}`;
-    }
+  function save(field, checked) {
+    if (settingsCommands.busy) return;
+    void settingsCommands.run(() =>
+      saveUiSettings({ ...$uiSettings, [field]: checked })
+    );
   }
 
   function toggleBho(e) {
-    setBho(e.target.checked, threshold);
+    void bhoCommands.run(() => setBho(e.detail.checked, threshold));
   }
 
   function commitThreshold(e) {
     slider = null;
-    setBho(true, +e.target.value);
+    void bhoCommands.run(() => setBho(true, +e.target.value));
   }
 
   async function checkUpdates() {
@@ -61,19 +70,22 @@
     <span class="card-label">Application</span>
     <Toggle
       checked={$uiSettings.autostart}
-      on:change={(event) => save('autostart', event.target.checked)}
+      disabled={settingsBusy}
+      on:change={(event) => save('autostart', event.detail.checked)}
       label="Launch on login"
       hint="Start VFang minimized to the tray when you sign in"
     />
     <div class="rule"></div>
     <Toggle
       checked={$uiSettings.close_to_tray}
-      on:change={(event) => save('close_to_tray', event.target.checked)}
+      disabled={settingsBusy}
+      on:change={(event) => save('close_to_tray', event.detail.checked)}
       label="Close to tray"
       hint="Keep running in the tray when the window is closed"
     />
+    {#if settingsBusy}<p class="hint" role="status">Saving application settings…</p>{/if}
     {#if settingsError}
-      <div class="flag warn"><Icon name="warn" size={14} /> {settingsError}</div>
+      <div class="flag warn" role="alert"><Icon name="warn" size={14} /> {settingsError}</div>
     {/if}
   </div>
 
@@ -111,23 +123,27 @@
       <span class="card-label">Battery</span>
       <Toggle
         checked={bhoOn}
+        disabled={bhoBusy}
         on:change={toggleBho}
         label="Battery Health Optimizer"
         hint="Cap charging below 100% to extend the battery's lifespan"
       />
+      {#if bhoBusy}<p class="hint" role="status">Updating battery settings…</p>{/if}
       <div class="limit" class:off={!bhoOn}>
         <div class="cap mono">{threshold}<em>% charge cap</em></div>
         <input
           type="range"
+          aria-label="Battery charge cap"
           min="50"
           max="80"
           step="5"
           value={threshold}
-          disabled={!bhoOn}
+          disabled={!bhoOn || bhoBusy}
           style="--fill:{fill}%"
           on:input={(e) => (slider = +e.target.value)}
           on:change={commitThreshold}
         />
+        {#if bhoError}<div class="flag warn" role="alert">Could not update battery health settings: {bhoError}</div>{/if}
         <div class="scale mono"><span>50%</span><span>65%</span><span>80%</span></div>
       </div>
       <p class="hint">
