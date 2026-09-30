@@ -115,7 +115,7 @@ All notable changes to VFang are documented here. The format is based on
   unverified. AC unplug/replug and suspend/resume checks on the Blade still
   require user confirmation. Destructive package lifecycle checks run only in
   disposable validation environments.
-- TDP sliders are not included. [Research notes](docs/tdp-control-research.md)
+- TDP sliders are not included. [Research notes](https://github.com/bladeandsoulx/vfang-razer-linux/blob/v1.0.0/docs/tdp-control-research.md)
   separate CPU/GPU capabilities and require validated limits before exposing
   watt controls; the observed host bounds do not establish a safe range.
 - GLib retains its upstream 0.18.5 version for compatibility, so version-only
