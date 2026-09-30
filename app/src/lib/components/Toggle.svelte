@@ -1,6 +1,6 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-  import { captureAndRestoreCheckbox } from '../controlled-checkbox.js';
+  import { createEventDispatcher, tick } from 'svelte';
+  import { captureAndRestoreCheckbox, restoreCheckboxFocus } from '../controlled-checkbox.js';
 
   export let checked = false;
   export let disabled = false;
@@ -8,8 +8,20 @@
   export let hint = '';
 
   const dispatch = createEventDispatcher();
+  let input;
+  let restoreFocus = false;
+  let wasDisabled = false;
+
+  $: if (disabled) wasDisabled = true;
+  $: if (!disabled && wasDisabled) {
+    wasDisabled = false;
+    const wasFocused = restoreFocus;
+    restoreFocus = false;
+    void tick().then(() => restoreCheckboxFocus(input, wasFocused));
+  }
 
   function change(event) {
+    restoreFocus = event.currentTarget.ownerDocument.activeElement === event.currentTarget;
     const requested = captureAndRestoreCheckbox(event, checked);
     dispatch('change', { checked: requested });
   }
@@ -20,7 +32,7 @@
     <span class="label">{label}</span>
     {#if hint}<span class="hint">{hint}</span>{/if}
   </span>
-  <input type="checkbox" {checked} {disabled} on:change={change} />
+  <input bind:this={input} type="checkbox" {checked} {disabled} on:change={change} />
   <span class="pill"><span class="knob"></span></span>
 </label>
 

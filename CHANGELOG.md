@@ -4,7 +4,7 @@ All notable changes to VFang are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
-## [1.0.0] — Unreleased — Reliability and hardware telemetry
+## [1.0.0] — 2026-09-30 — Reliability and hardware telemetry
 
 ### Added
 
@@ -49,6 +49,8 @@ All notable changes to VFang are documented here. The format is based on
 - Toggles retain keyboard focus, show focus feedback and display confirmed
   state. Battery optimizer failures are shown instead of leaving a misleading
   local ON state when the backend rejects the request.
+- Keyboard-operated toggles recover focus after a pending save temporarily
+  disables them, without taking focus from another control.
 - Sidebar navigation follows browser history and marks the active page.
 - Release-version updates validate every replacement before writing files, so
   malformed later inputs do not partially update component versions.
@@ -68,6 +70,8 @@ All notable changes to VFang are documented here. The format is based on
   telemetry keeps the existing dashboard layout.
 - Clarify OLED/kernel guidance and distinguish Windows component checks from
   Linux integration and physical hardware validation in the documentation.
+- GitHub release notes come from the dated changelog, including known
+  limitations; publication refuses missing, undated or empty notes.
 
 ### Security
 
@@ -89,12 +93,17 @@ All notable changes to VFang are documented here. The format is based on
 ### Verification and known limitations
 
 - Windows Rust workspace/Tauri tests, frontend tests, portable release
-  contracts and parser checks passed, alongside formatting, strict Clippy and
-  component builds. POSIX-only fixtures were explicitly skipped on Windows.
-  Configured CI was not dispatched remotely during this work.
+  contracts and parser checks passed in CI, alongside formatting, strict
+  Clippy and component builds. POSIX-only fixtures were explicitly skipped on
+  Windows. Package lifecycle checks passed on Ubuntu 22.04/24.04/26.04,
+  Debian 12/13, Fedora 43/44, Arch Linux and CachyOS containers.
 - Linux compilation, mock daemon tests, native Tauri test harnesses and POSIX
   installer/release fixtures are now validated on Zorin OS 18.1 (Ubuntu 24.04
-  base). Review/build steps do not open the application or install its service.
+  base). The Blade 18 (2024) upgraded from 0.9.9 to the 1.0.0 test packages
+  with saved daemon/UI settings preserved, an active service and a connected
+  native Wayland app. Browser-simulator and native-app/mock-daemon interaction
+  checks cover navigation, Custom automation, lighting and battery-setting
+  persistence; they are not physical hardware validation.
 - Issue [#7](https://github.com/bladeandsoulx/vfang-razer-linux/issues/7):
   static RGB packet checks passed, but the modified Blade's green-only lighting
   remains unconfirmed on hardware; no hardware fix is claimed.
@@ -102,9 +111,13 @@ All notable changes to VFang are documented here. The format is based on
   confirmed battery settings survived fresh screen renders and a mock-daemon
   restart. These checks and the improved error reporting do not establish a
   fix for the affected machine's firmware or physical charging behavior.
-- Manual UI interaction, actual GPU power savings and fan/battery/lighting
-  behavior still require desktop-session and physical-device checks. Actual
-  package installation/removal belongs in disposable validation environments.
+- Actual GPU power savings and physical fan/battery/lighting behavior remain
+  unverified. AC unplug/replug and suspend/resume checks on the Blade still
+  require user confirmation. Destructive package lifecycle checks run only in
+  disposable validation environments.
+- TDP sliders are not included. [Research notes](docs/tdp-control-research.md)
+  separate CPU/GPU capabilities and require validated limits before exposing
+  watt controls; the observed host bounds do not establish a safe range.
 - GLib retains its upstream 0.18.5 version for compatibility, so version-only
   scans may continue to report RUSTSEC-2024-0429 despite the source backport.
   Transitive maintenance advisories remain. Package installation is not an atomic

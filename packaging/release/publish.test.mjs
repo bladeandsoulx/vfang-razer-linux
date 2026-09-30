@@ -61,7 +61,7 @@ function makeFixture({ badDigest = false } = {}) {
   executable(
     path.join(bin, 'gh'),
     `#!/usr/bin/env bash
-printf '%s\\n' "$*" >> "\${FANG_TEST_GH_LOG}"
+printf '%s\\n' "\${*//$'\\n'/\\\\n}" >> "\${FANG_TEST_GH_LOG}"
 joined="$*"
 case "$joined" in
   *immutable-releases*)
@@ -155,6 +155,8 @@ test('publisher creates, validates, and publishes one eight-asset release', () =
   assert.equal((log.match(/--method PATCH/g) ?? []).length, 1);
   assert.match(log, /immutable-releases/);
   assert.match(log, /releases\/latest/);
+  assert.match(log, /body=## /);
+  assert.doesNotMatch(log, /generate_release_notes=true/);
   assert.doesNotMatch(log, /--method DELETE|clobber/);
   assert.match(result.stdout, new RegExp(`Published immutable VFang v${version.replaceAll('.', '\\.')} release`));
   fixture.cleanup();

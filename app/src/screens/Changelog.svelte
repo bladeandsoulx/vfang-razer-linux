@@ -3,7 +3,7 @@
   const RELEASES = [
     {
       version: '1.0.0',
-      date: 'Unreleased',
+      date: '2026-09-30',
       title: 'Reliability and hardware telemetry',
       groups: [
         {
@@ -25,6 +25,7 @@
             'Late startup snapshots cannot overwrite newer confirmed state. Independent startup queries continue after failures and offer Retry.',
             'Hardware controls show pending states and errors, prevent overlapping saves and lock fan-curve editing during Apply. Battery optimizer failures no longer leave a misleading local ON toggle.',
             'Toggles retain keyboard focus, navigation follows browser history, and release-version inputs are validated before files are written.',
+            'Keyboard-operated toggles recover focus after a pending save temporarily disables them, without taking focus from another control.',
             'Linux display helpers bound output and include inherited pipes in their deadline. Internal-panel brightness handles large sysfs ranges safely.',
             'Source installation finishes both builds before installing the package pair; package build outputs preserve existing artifacts.'
           ]
@@ -34,7 +35,8 @@
           items: [
             'Removed real Xe activity/frequency reads that can wake hardware. Unavailable readings stay absent; mock activity and frequency remain supported.',
             'RAPL readings are labeled Uncore power (iGPU proxy), with Activity unavailable when needed. Older telemetry retains the existing dashboard layout.',
-            'Documentation clarifies OLED/kernel guidance and which checks need Linux or physical hardware.'
+            'Documentation clarifies OLED/kernel guidance and which checks need Linux or physical hardware.',
+            'Published GitHub release notes include the dated changelog and its known limitations.'
           ]
         },
         {
@@ -49,11 +51,12 @@
         {
           kind: 'Notes',
           items: [
-            'Linux native builds and automated regression checks passed on Zorin OS 18.1 (Ubuntu 24.04 base). Desktop interaction and physical GPU/fan/battery/lighting validation remain pending.',
+            'Linux native builds and automated regression checks passed on Zorin OS 18.1 (Ubuntu 24.04 base). The 0.9.9-to-1.0.0 test-package upgrade preserved settings and the native Wayland app connected. Browser and native mock interactions passed; physical GPU/fan/battery/lighting validation remain pending.',
             'Issue #7: static RGB packet checks passed; the modified Blade lighting problem remains unconfirmed on hardware.',
             'Issue #8: confirmed battery settings survived fresh screen renders and a mock restart; the affected firmware and physical charge limit still need confirmation.',
             'GLib retains its compatible upstream version, so version-only scans may still flag the GLib advisory despite the source backport. Other transitive maintenance advisories remain.',
-            'Package installation does not guarantee atomic rollback. These unreleased changes are not part of the published 0.9.9 release.'
+            'AC unplug/replug and suspend/resume checks still need user confirmation. TDP sliders are not included; capability and safe-limit research is separate.',
+            'Package installation does not guarantee atomic rollback; keep the previous matching app/daemon pair available.'
           ]
         }
       ]

@@ -103,6 +103,10 @@ main() {
   local_count=$(find "$RELEASE_DIR" -mindepth 1 -maxdepth 1 -type f -printf . | wc -c)
   [[ $local_count == 8 ]] || fatal "local release inventory contains $local_count files, expected 8"
 
+  local release_notes
+  release_notes=$(node "$(dirname "${BASH_SOURCE[0]}")/release-notes.mjs" "$VERSION") ||
+    fatal 'could not read dated changelog notes for this release'
+
   local immutable_enabled
   immutable_enabled=$(
     GH_TOKEN=$IMMUTABLE_RELEASES_TOKEN gh api \
@@ -146,7 +150,7 @@ main() {
       -f "target_commitish=$GITHUB_SHA" \
       -F draft=true \
       -F prerelease=false \
-      -F generate_release_notes=true \
+      -f "body=$release_notes" \
       --jq '.id' \
       "$API/releases"
   ) || fatal 'could not create the release draft'
