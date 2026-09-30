@@ -69,7 +69,7 @@ replacement for every Razer device.
 
 ## Will it work on my laptop?
 
-VFang recognizes **48 Razer Blade models from 2015–2025**. Each known model has
+VFang recognizes **49 Razer Blade models from 2015–2026**. Each known model has
 its own safe fan limits and feature list.
 
 Tested x86_64 Linux bases:
@@ -85,6 +85,15 @@ derivatives are accepted when `/etc/os-release` contains the exact
 `ID_LIKE=arch` family token. The installer warns that compatible derivatives
 are not tested directly. Other CPU architectures and unsupported base releases
 are rejected before anything is installed.
+
+**Blade 16 2026 (OLED):** the built-in panel's brightness keys and VFang's
+brightness slider only work with the kernel parameter
+`xe.enable_dpcd_backlight=1`, which switches the Intel `xe` driver to the
+panel's DisplayPort (DPCD) backlight control. Add it to your bootloader's
+kernel command line (for example a file in `/etc/limine-entry-tool.d/` followed by
+`sudo limine-update`, or `GRUB_CMDLINE_LINUX_DEFAULT` followed by
+`sudo grub-mkconfig -o /boot/grub/grub.cfg`), then reboot. This is a
+driver setting, so VFang can't apply it for you.
 
 Unknown Razer product IDs are monitor-only by default. Check the
 [full model list](crates/fang-protocol/src/models.rs) or follow

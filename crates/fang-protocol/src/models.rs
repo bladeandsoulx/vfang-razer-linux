@@ -455,6 +455,15 @@ pub const MODELS: &[LaptopModel] = &[
         has_bho: true,
         has_logo: true,
     },
+    LaptopModel {
+        pid: 0x02E0,
+        name: "Razer Blade 16 2026",
+        fan_rpm_min: 2200,
+        fan_rpm_max: 5000,
+        has_cpu_boost_oc: true,
+        has_bho: true,
+        has_logo: true,
+    },
 ];
 
 /// Conservative limits for an explicitly approved laptop not yet in [`MODELS`].
@@ -488,7 +497,7 @@ mod tests {
                 m.name
             );
         }
-        assert_eq!(MODELS.len(), 48);
+        assert_eq!(MODELS.len(), 49);
     }
 
     #[test]

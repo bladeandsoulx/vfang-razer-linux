@@ -133,6 +133,10 @@ speak DDC/CI):
   the same recovery immediately.
 - **Internal-panel brightness** — the laptop-panel slider changes the built-in
   screen's backlight instantly (through logind, no root); clamped to 5–100 %.
+  On OLED panels driven by Intel `xe` (e.g. Blade 16 2026), if neither the
+  slider nor the laptop's brightness keys change anything, boot with
+  `xe.enable_dpcd_backlight=1` and retest. Note in your report whether it was
+  needed.
 
 The Blade's own wide-gamut panel has no color-managed gamut clamp on Linux, so
 there's no internal "sRGB profile" to test — the UI says as much.
