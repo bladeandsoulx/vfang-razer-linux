@@ -141,6 +141,40 @@ speak DDC/CI):
 The Blade's own wide-gamut panel has no color-managed gamut clamp on Linux, so
 there's no internal "sRGB profile" to test — the UI says as much.
 
+## 6c-2. Blade 16 (2024) static keyboard colors — issue #7
+
+VFang 1.0.1 uses a solid-color 6x16 custom frame for USB PID `1532:02B7`,
+following the hardware-tested workaround in
+[OpenRazer PR #2827](https://github.com/openrazer/openrazer/pull/2827).
+The regular static effect command is ignored on this model. The affected
+2023-motherboard/2024-chassis laptop still needs its own retest; packet and mock
+tests do not confirm its physical LEDs.
+
+Record the installed version and device before testing:
+
+```sh
+fangd --version
+dpkg-query -W -f='${Package} ${Version}\n' fang fangd  # Ubuntu/Debian
+lsusb -d 1532:02b7
+```
+
+In **Lighting**, choose Static and try pure red (`#ff0000`), pure blue
+(`#0000ff`) and a custom color (`#78ff8c`). Record the visible keyboard color
+and any error in the app for each selection. Switch to Wave, then back to
+Static, and check the requested color returns. Restarting the matching test
+daemon should restore the saved color because custom frames are volatile.
+Perform service restart or suspend tests only when prepared for that disruption.
+
+Collect the log immediately afterward:
+
+```sh
+journalctl -u fangd --since '5 minutes ago' --no-pager
+```
+
+If a row or activation fails, the app should report it instead of confirming a
+saved color. Include that error and the log in issue #7. Keep the issue open
+until the reporter confirms the physical colors on the modified laptop.
+
 ## 6d. Battery Health Optimizer
 
 On models with the "bho" feature (Settings shows a Battery card): enable

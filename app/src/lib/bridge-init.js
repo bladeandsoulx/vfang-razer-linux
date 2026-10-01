@@ -10,20 +10,42 @@ function messageFor(error) {
   return error instanceof Error ? error.message : String(error ?? 'Command failed');
 }
 
-/** Keep startup snapshots from replacing state received from newer events. */
+/** Keep asynchronous snapshots and commands from replacing newer state. */
 export function createSnapshotRevisionGuard() {
   const revisions = new Map();
+  const observedRevisions = new Map();
+  const confirmedCommands = new Map();
+  let nextCommand = 0;
+
+  function mark(key) {
+    revisions.set(key, (revisions.get(key) ?? 0) + 1);
+    observedRevisions.set(key, (observedRevisions.get(key) ?? 0) + 1);
+  }
 
   return {
     capture() {
       return new Map(revisions);
     },
-    mark(key) {
-      revisions.set(key, (revisions.get(key) ?? 0) + 1);
-    },
+    mark,
     publishLocal(key, value, publishValue) {
+      mark(key);
+      publishValue(value);
+    },
+    captureCommand(key) {
+      // Supersede startup snapshots already in flight, without publishing an
+      // optimistic value. Responses are ordered separately from observed events
+      // so an older command finishing first cannot suppress a newer response.
+      revisions.set(key, (revisions.get(key) ?? 0) + 1);
+      return { key, observed: observedRevisions.get(key) ?? 0, sequence: ++nextCommand };
+    },
+    publishCommand(captured, value, publishValue) {
+      const { key, observed, sequence } = captured;
+      if ((observedRevisions.get(key) ?? 0) !== observed ||
+          sequence <= (confirmedCommands.get(key) ?? 0)) return false;
+      confirmedCommands.set(key, sequence);
       revisions.set(key, (revisions.get(key) ?? 0) + 1);
       publishValue(value);
+      return true;
     },
     publish(state, captured, publishValue) {
       for (const [key, value] of Object.entries(state)) {

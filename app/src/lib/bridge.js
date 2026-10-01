@@ -106,13 +106,15 @@ function publishLocalState(key, store, value) {
   snapshotRevisions.publishLocal(key, value, (confirmed) => store.set(confirmed));
 }
 
+async function invokeAndPublishState(key, store, command, args) {
+  const captured = snapshotRevisions.captureCommand(key);
+  const value = await invoke(command, args);
+  snapshotRevisions.publishCommand(captured, value, (confirmed) => store.set(confirmed));
+}
+
 export async function setPerfMode(perfMode, cpuBoost = null, gpuBoost = null) {
   if (invoke) {
-    publishLocalState(
-      'status',
-      status,
-      await invoke('set_perf_mode', { perfMode, cpuBoost, gpuBoost })
-    );
+    await invokeAndPublishState('status', status, 'set_perf_mode', { perfMode, cpuBoost, gpuBoost });
   } else {
     sim.setPerfMode(perfMode, cpuBoost, gpuBoost);
   }
@@ -120,7 +122,7 @@ export async function setPerfMode(perfMode, cpuBoost = null, gpuBoost = null) {
 
 export async function setFan(fan) {
   if (invoke) {
-    publishLocalState('status', status, await invoke('set_fan', { fan }));
+    await invokeAndPublishState('status', status, 'set_fan', { fan });
   } else {
     sim.setFan(fan);
   }
@@ -137,7 +139,7 @@ export async function saveUiSettings(next) {
 
 export async function setGpuMode(gpuMode) {
   if (invoke) {
-    publishLocalState('status', status, await invoke('set_gpu_mode', { gpuMode }));
+    await invokeAndPublishState('status', status, 'set_gpu_mode', { gpuMode });
   } else {
     sim.setGpuMode(gpuMode);
   }
@@ -145,7 +147,7 @@ export async function setGpuMode(gpuMode) {
 
 export async function setBho(enabled, threshold) {
   if (invoke) {
-    publishLocalState('status', status, await invoke('set_bho', { enabled, threshold }));
+    await invokeAndPublishState('status', status, 'set_bho', { enabled, threshold });
   } else {
     sim.setBho(enabled, threshold);
   }
@@ -154,7 +156,7 @@ export async function setBho(enabled, threshold) {
 /** Partial update: { brightness, kbdEffect, logoLed } — omit to keep. */
 export async function setLighting(patch) {
   if (invoke) {
-    publishLocalState('status', status, await invoke('set_lighting', patch));
+    await invokeAndPublishState('status', status, 'set_lighting', patch);
   } else {
     sim.setLighting(patch);
   }
@@ -171,7 +173,7 @@ export async function openExternal(url) {
 
 export async function setRefreshRate(hz) {
   if (invoke) {
-    publishLocalState('display', display, await invoke('set_refresh_rate', { hz }));
+    await invokeAndPublishState('display', display, 'set_refresh_rate', { hz });
   } else {
     sim.setRefreshRate(hz);
   }
@@ -180,7 +182,7 @@ export async function setRefreshRate(hz) {
 /** Internal laptop-panel backlight brightness (percent). */
 export async function setPanelBrightness(percent) {
   if (invoke) {
-    publishLocalState('panel', panel, await invoke('set_panel_brightness', { percent }));
+    await invokeAndPublishState('panel', panel, 'set_panel_brightness', { percent });
   } else {
     sim.setPanelBrightness(percent);
   }
@@ -189,7 +191,7 @@ export async function setPanelBrightness(percent) {
 /** External-monitor DDC color-temperature preset (value = VCP 0x14 code). */
 export async function setColorPreset(value) {
   if (invoke) {
-    publishLocalState('status', status, await invoke('set_color_preset', { value }));
+    await invokeAndPublishState('status', status, 'set_color_preset', { value });
   } else {
     sim.setColorPreset(value);
   }
@@ -198,7 +200,7 @@ export async function setColorPreset(value) {
 /** External-monitor DDC brightness (VCP 0x10), value = 0..=100 percent. */
 export async function setMonitorBrightness(value) {
   if (invoke) {
-    publishLocalState('status', status, await invoke('set_monitor_brightness', { value }));
+    await invokeAndPublishState('status', status, 'set_monitor_brightness', { value });
   } else {
     sim.setMonitorBrightness(value);
   }
@@ -207,7 +209,7 @@ export async function setMonitorBrightness(value) {
 /** Immediately retry external-monitor DDC/CI discovery. */
 export async function rescanDdc() {
   if (invoke) {
-    publishLocalState('status', status, await invoke('rescan_ddc'));
+    await invokeAndPublishState('status', status, 'rescan_ddc');
   } else {
     sim.rescanDdc();
   }
@@ -216,17 +218,13 @@ export async function rescanDdc() {
 /** AC/battery automation: enable + the profile and fan for each source. */
 export async function setAutoPower(enabled, acProfile, batteryProfile, acFan, batteryFan) {
   if (invoke) {
-    publishLocalState(
-      'status',
-      status,
-      await invoke('set_auto_power', {
-        enabled,
-        acProfile,
-        batteryProfile,
-        acFan,
-        batteryFan
-      })
-    );
+    await invokeAndPublishState('status', status, 'set_auto_power', {
+      enabled,
+      acProfile,
+      batteryProfile,
+      acFan,
+      batteryFan
+    });
   } else {
     sim.setAutoPower(enabled, acProfile, batteryProfile, acFan, batteryFan);
   }

@@ -129,10 +129,10 @@ bash install.sh
 This lets you read the script before it asks for administrator access.
 
 For an extra integrity check, download the installer and checksum manifest from
-the pinned v1.0.0 release:
+the pinned v1.0.1 release:
 
 ```bash
-curl -fLO 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/download/v1.0.0/{install.sh,SHA256SUMS}'
+curl -fLO 'https://github.com/bladeandsoulx/vfang-razer-linux/releases/download/v1.0.1/{install.sh,SHA256SUMS}'
 grep '  install.sh$' SHA256SUMS > install.sh.sha256
 sha256sum --check install.sh.sha256
 ```
@@ -146,10 +146,10 @@ Download both packages from the same release, then install them together:
 
 ```bash
 # Ubuntu or Debian
-sudo apt install ./fangd_1.0.0-1_amd64.deb ./Fang_1.0.0_amd64.deb
+sudo apt install ./fangd_1.0.1-1_amd64.deb ./Fang_1.0.1_amd64.deb
 
 # Fedora 43 or 44
-sudo dnf install ./fangd-1.0.0-1.x86_64.rpm ./fang-1.0.0-1.x86_64.rpm
+sudo dnf install ./fangd-1.0.1-1.x86_64.rpm ./fang-1.0.1-1.x86_64.rpm
 ```
 
 On Arch Linux, CachyOS, or a compatible Arch derivative, first fully update
@@ -157,8 +157,8 @@ with `sudo pacman -Syu`. Reboot before installing VFang if that update requests
 it, then install the release pair:
 
 ```bash
-sudo pacman -U ./fangd-1.0.0-1-x86_64.pkg.tar.zst \
-  ./fang-1.0.0-1-x86_64.pkg.tar.zst
+sudo pacman -U ./fangd-1.0.1-1-x86_64.pkg.tar.zst \
+  ./fang-1.0.1-1-x86_64.pkg.tar.zst
 ```
 
 Enable the background service and give your user access:

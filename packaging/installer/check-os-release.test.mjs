@@ -110,12 +110,14 @@ for (const [name, expectedPlatform] of [
 }
 
 test('push and tag workflows gate Pacman packages on Arch and CachyOS', () => {
-  for (const source of [read('.github/workflows/ci.yml'), read('.github/workflows/release.yml')]) {
+  for (const workflow of ['ci', 'release']) {
+    const source = read(`.github/workflows/${workflow}.yml`);
     assert.match(source, /archlinux:base-devel/);
     assert.match(source, /cachyos\/cachyos:latest/);
     assert.match(source, /packaging\/arch\/build\.sh target\/arch-dist/);
     assert.match(source, /packaging\/arch\/verify\.sh target\/arch-dist fangtest/);
-    assert.match(source, /name: fang-arch-packages/);
+    const artifact = workflow === 'ci' ? 'ci-fang-arch-packages' : 'fang-arch-packages';
+    assert.ok(source.includes(`name: ${artifact}`));
     assert.match(source, /arch-container/);
     assert.match(source, /cachyos-container/);
     assert.match(source, /capture: cachyos-container\n\s+platform: CachyOS/);

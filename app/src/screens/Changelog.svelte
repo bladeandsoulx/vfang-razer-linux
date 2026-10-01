@@ -2,6 +2,35 @@
   // Mirrors CHANGELOG.md, condensed for the panel. Newest first.
   const RELEASES = [
     {
+      version: '1.0.1',
+      date: '2026-10-01',
+      title: 'Keyboard colors, resume safety and recovery',
+      groups: [
+        {
+          kind: 'Fixed',
+          items: [
+            'Blade 16 (2024), USB PID 1532:02B7, uses a solid-color 6x16 keyboard frame for Static, following the workaround tested by the contributor to OpenRazer PR #2827.',
+            'Six rows upload before the frame is activated. Busy frame commands have at most five attempts; row and activation errors use settings rollback and fan-safe recovery.',
+            'Resume discards cached CPU/GPU temperatures. Manual and Curve fans hold the model maximum until a new CPU reading arrives, including after failed sensor reads.',
+            'Failed daemon preference saves report an error and retain the previous settings. Hardware rollback failures use EC Auto when possible and report unconfirmed recovery.',
+            'Power automation retries failed changes every five seconds. New power sources and confirmed profile, fan or automation choices supersede pending retries.',
+            'Dashboard labels distinguish EC Auto, Manual requested targets and Custom Curve, and show thermal and CPU sensor-loss overrides.',
+            'Dashboard and Fan screens warn when telemetry is five seconds old, including when the stream stops, and clear the warning on fresh data.',
+            'Missing EC devices and lost HID handles are rediscovered without restarting sensors or NVML. Recovery reapplies all settings for the model and keeps software fans at maximum until a fresh CPU reading permits a lower target.',
+            'Delayed command responses cannot replace newer automation events or confirmed settings. Display and panel updates remain independent, and errors still surface.',
+            'Tagged releases require the full application CI and every existing package gate. Reusable CI and release artifacts have distinct names and matching downloads, preventing upload conflicts.'
+          ]
+        },
+        {
+          kind: 'Notes',
+          items: [
+            'Verified with packet, daemon, frontend and release regressions using mock transports and isolated state files. The issue #7 laptop with a 2023 motherboard and 2024 chassis still needs a physical color retest.',
+            'Physical unplug/replug, suspend/resume and issue #8 charging-limit confirmation remain pending. TDP controls remain research only.'
+          ]
+        }
+      ]
+    },
+    {
       version: '1.0.0',
       date: '2026-09-30',
       title: 'Reliability and hardware telemetry',

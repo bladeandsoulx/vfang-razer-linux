@@ -170,7 +170,8 @@ pub async fn telemetry_loop(core: SharedCore, peripherals: SnapshotStore, bus: E
         }
         let s = core.sample();
         let auto_changed = core.power_tick(on_ac);
-        let auto_status = auto_changed.then(|| core.status(&read_snapshot(&peripherals)));
+        let auto_status =
+            (auto_changed || s.status_changed).then(|| core.status(&read_snapshot(&peripherals)));
         drop(core);
 
         let telemetry = Telemetry {
@@ -194,7 +195,7 @@ pub async fn telemetry_loop(core: SharedCore, peripherals: SnapshotStore, bus: E
                 .as_millis() as u64,
         };
         let _ = bus.send(event_line(&Event::Telemetry(telemetry)));
-        // A power-source transition may have auto-switched the profile.
+        // Power automation and EC loss/recovery both change visible status.
         if let Some(status) = auto_status {
             let _ = bus.send(event_line(&Event::StateChanged(status)));
         }

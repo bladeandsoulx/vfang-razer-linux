@@ -2,6 +2,7 @@
 
 use fang_protocol::api::{Boost, FanCurvePoint, FanMode, KbdEffect, LogoMode, PerfMode};
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -111,20 +112,25 @@ impl AppliedState {
         }
     }
 
-    /// Atomic write (tmp + rename) so a crash can't truncate the state file.
-    pub fn save(&self, path: &Path) {
-        let write = || -> std::io::Result<()> {
+    /// Flush a replacement before atomically renaming it. Never hide a save
+    /// failure: a caller must not report an unpersisted preference as saved.
+    pub fn save(&self, path: &Path) -> std::io::Result<()> {
+        let tmp = path.with_extension("json.tmp");
+        let result = (|| {
             if let Some(dir) = path.parent() {
                 std::fs::create_dir_all(dir)?;
             }
-            let tmp = path.with_extension("json.tmp");
-            std::fs::write(&tmp, serde_json::to_vec_pretty(self).expect("serializable"))?;
+            let mut file = std::fs::File::create(&tmp)?;
+            file.write_all(&serde_json::to_vec_pretty(self)?)?;
+            file.sync_all()?;
+            drop(file);
             std::fs::rename(&tmp, path)?;
             Ok(())
-        };
-        if let Err(e) = write() {
-            log::error!("failed to persist state to {}: {e}", path.display());
+        })();
+        if result.is_err() {
+            let _ = std::fs::remove_file(&tmp);
         }
+        result
     }
 }
 
