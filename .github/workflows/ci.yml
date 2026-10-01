@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_call:
   push:
     branches: [main]
   pull_request:
@@ -71,6 +72,7 @@ jobs:
       - run: node --test packaging/installer/source-install.test.mjs packaging/installer/package-output.test.mjs
       - run: node packaging/installer/installer.test.mjs
       - run: node packaging/release/release-contract.test.mjs
+      - run: node --test packaging/release/workflow.test.mjs
       - run: node packaging/release/publish.test.mjs
       - run: node --test packaging/release/release-notes.test.mjs
       - run: node packaging/deb/verify.test.mjs
@@ -166,7 +168,7 @@ jobs:
           test "$(find target/deb-dist -maxdepth 1 -type f -name '*.deb' | wc -l)" -eq 2
       - uses: actions/upload-artifact@v4
         with:
-          name: fang-debs
+          name: ci-fang-debs
           path: target/deb-dist/*.deb
           if-no-files-found: error
 
@@ -202,7 +204,7 @@ jobs:
           packaging/installer/check-os-release.sh "$capture_name" "$expected_platform"
       - uses: actions/download-artifact@v4
         with:
-          name: fang-debs
+          name: ci-fang-debs
           path: target/deb-dist
       - run: packaging/deb/verify.sh target/deb-dist
 
@@ -232,7 +234,7 @@ jobs:
       - run: packaging/rpm/build.sh target/rpm-dist
       - uses: actions/upload-artifact@v4
         with:
-          name: fang-rpms
+          name: ci-fang-rpms
           path: target/rpm-dist/*.rpm
           if-no-files-found: error
 
@@ -259,7 +261,7 @@ jobs:
           "Fedora ${{ matrix.fedora }}"
       - uses: actions/download-artifact@v4
         with:
-          name: fang-rpms
+          name: ci-fang-rpms
           path: target/rpm-dist
       - run: packaging/rpm/verify.sh target/rpm-dist
 
@@ -278,7 +280,7 @@ jobs:
       - run: runuser -u builder -- env PATH="$PATH" packaging/arch/build.sh target/arch-dist
       - uses: actions/upload-artifact@v4
         with:
-          name: fang-arch-packages
+          name: ci-fang-arch-packages
           path: target/arch-dist/*.pkg.tar.zst
           if-no-files-found: error
 
@@ -320,7 +322,7 @@ jobs:
           "${{ matrix.capture }}" "${{ matrix.platform }}"
       - uses: actions/download-artifact@v4
         with:
-          name: fang-arch-packages
+          name: ci-fang-arch-packages
           path: target/arch-dist
       - run: useradd --create-home fangtest
       - run: packaging/arch/verify.sh target/arch-dist fangtest

@@ -2,7 +2,7 @@
 %global fangd_upper 1.1.0
 
 Name: fang
-Version: 1.0.0
+Version: 1.0.1
 Release: 1
 Summary: Razer Blade control center for Linux
 License: GPL-2.0-only

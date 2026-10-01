@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name: fangd
-Version: 1.0.0
+Version: 1.0.1
 Release: 1
 Summary: Privileged hardware-control daemon for VFang
 License: GPL-2.0-only

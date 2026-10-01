@@ -6,7 +6,7 @@
 //! ```text
 //! [0]     report number (always 0x00)
 //! [1]     status        (0x00 new command; responses: 0x02 ok, ...)
-//! [2]     transaction id (0x1F for Blade laptops)
+//! [2]     transaction id (0x1F for EC commands; 0xFF for 02B7 custom frames)
 //! [3..5]  remaining packets (always 0)
 //! [5]     protocol type (always 0)
 //! [6]     data size     (number of meaningful arg bytes)
@@ -375,6 +375,31 @@ pub fn try_set_kbd_effect(effect_id: u8, params: &[u8]) -> Result<Report, Argume
     Report::try_new(0x03, 0x0a, &args)
 }
 
+/// The Blade 16 (2024) ignores the regular static effect command. Fill its
+/// 6x16 matrix, then activate the volatile custom frame. These are the standard
+/// OpenRazer row/frame encodings used by its hardware-tested PR #2827:
+/// <https://github.com/openrazer/openrazer/pull/2827> (GPL-2.0-or-later).
+/// No row/column input is accepted, so every payload has fixed, valid bounds.
+pub fn blade_16_2024_static_frame(rgb: [u8; 3]) -> [Report; 7] {
+    std::array::from_fn(|index| {
+        let mut report = if index < 6 {
+            // OpenRazer declares 0x46 bytes even though sixteen pixels use
+            // only 48 RGB bytes. The remaining argument bytes stay zero.
+            let mut args = [0u8; 0x46];
+            args[..4].copy_from_slice(&[0xff, index as u8, 0, 15]);
+            for pixel in args[4..52].chunks_exact_mut(3) {
+                pixel.copy_from_slice(&rgb);
+            }
+            Report::new(0x03, 0x0b, &args)
+        } else {
+            // Effect 0x05 = custom frame; frame selector 0x00 = NOSTORE.
+            Report::new(0x03, 0x0a, &[0x05, 0x00])
+        };
+        report.transaction_id = 0xff;
+        report
+    })
+}
+
 // ---- EC commands (class 0x07: battery) --------------------------------------
 
 /// Battery Health Optimizer (Synapse's charge limiter). One arg byte: top
@@ -425,6 +450,61 @@ mod tests {
             assert_eq!(Report::from_feature_report(&wire).unwrap(), report);
             assert_eq!(set_kbd_effect(kbd_effect::STATIC, &rgb), report);
         }
+    }
+
+    #[test]
+    fn blade_16_2024_frame_encodes_all_six_rows_and_sixteen_rgb_pixels() {
+        // Independently specified OpenRazer wire layout, including its fixed
+        // 0x46 data size and 0xFF transaction/frame ids. RGB values must never
+        // be reduced to the firmware's default green.
+        for rgb in [
+            [255, 0, 0],
+            [0, 255, 0],
+            [0, 0, 255],
+            [120, 255, 140],
+            [0; 3],
+            [255; 3],
+        ] {
+            let reports = blade_16_2024_static_frame(rgb);
+            for (row, report) in reports[..6].iter().enumerate() {
+                let wire = report.to_feature_report();
+                assert_eq!(&wire[..9], &[0, 0, 0xff, 0, 0, 0, 0x46, 3, 0x0b]);
+                assert_eq!(&wire[9..13], &[0xff, row as u8, 0, 15]);
+                for pixel in wire[13..61].chunks_exact(3) {
+                    assert_eq!(pixel, rgb);
+                }
+                assert!(wire[61..89].iter().all(|byte| *byte == 0));
+                // Sixteen repeats cancel in the XOR checksum.
+                assert_eq!(wire[89], 0xbe ^ row as u8);
+                assert_eq!(wire[90], 0);
+                assert_eq!(Report::from_feature_report(&wire).unwrap(), *report);
+            }
+        }
+    }
+
+    #[test]
+    fn blade_16_2024_frame_activation_matches_the_volatile_custom_effect() {
+        let reports = blade_16_2024_static_frame([255, 0, 0]);
+        let mut expected = [0; REPORT_LEN];
+        expected[..11].copy_from_slice(&[0, 0, 0xff, 0, 0, 0, 2, 3, 0x0a, 5, 0]);
+        expected[89] = 0x0e;
+        assert_eq!(reports[6].to_feature_report(), expected);
+    }
+
+    #[test]
+    fn custom_frame_responses_must_match_the_ff_transaction() {
+        let request = &blade_16_2024_static_frame([0, 0, 255])[0];
+        let mut reply = request.clone();
+        reply.status = status::SUCCESS;
+        assert!(Report::response_from_feature_report(request, &reply.to_feature_report()).is_ok());
+        reply.transaction_id = 0x1f;
+        assert_eq!(
+            Report::response_from_feature_report(request, &reply.to_feature_report()),
+            Err(ReportError::TransactionId {
+                expected: 0xff,
+                actual: 0x1f
+            })
+        );
     }
 
     #[test]

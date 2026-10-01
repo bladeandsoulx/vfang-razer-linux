@@ -188,3 +188,30 @@ test('confirmed command results survive an older deferred retry snapshot', async
   assert.deepEqual(published.panel, localResults.panel);
   assert.deepEqual(result.issues, []);
 });
+
+test('an older startup snapshot cannot publish status while a newer command is pending', async () => {
+  const revisions = createSnapshotRevisionGuard();
+  const published = {};
+  let finishDisplay;
+  let started;
+  const displayStarted = new Promise(resolve => { started = resolve; });
+  const loading = loadAndPublishBridgeSnapshot(async command => {
+    if (command === 'get_display') {
+      started();
+      await new Promise(resolve => { finishDisplay = resolve; });
+      return { current_hz: 60 };
+    }
+    if (command === 'daemon_connected') return true;
+    if (command === 'get_status') return { perf_mode: 'gaming' };
+    return { ok: true };
+  }, revisions, (key, value) => { published[key] = value; });
+
+  await displayStarted;
+  const command = revisions.captureCommand('status');
+  finishDisplay();
+  await loading;
+  assert.equal(published.status, undefined);
+  assert.deepEqual(published.display, { current_hz: 60 });
+  revisions.publishCommand(command, { perf_mode: 'silent' }, value => { published.status = value; });
+  assert.deepEqual(published.status, { perf_mode: 'silent' });
+});

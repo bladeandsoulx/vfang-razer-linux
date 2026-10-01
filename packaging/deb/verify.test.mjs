@@ -52,7 +52,8 @@ test('CI and release test one DEB pair on all five supported bases', () => {
     const source = fs.readFileSync(workflow, 'utf8');
     for (const image of images) assert.match(source, new RegExp(image.replace('.', '\\.')));
     assert.match(source, /packaging\/deb\/verify\.sh target\/deb-dist/);
-    assert.match(source, /name: fang-debs/);
+    const artifact = path.basename(workflow) === 'ci.yml' ? 'ci-fang-debs' : 'fang-debs';
+    assert.ok(source.includes(`name: ${artifact}`));
   }
 });
 

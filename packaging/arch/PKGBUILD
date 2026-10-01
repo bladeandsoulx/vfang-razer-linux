@@ -1,6 +1,6 @@
 pkgbase=vfang
 pkgname=(fang fangd)
-pkgver=1.0.0
+pkgver=1.0.1
 pkgrel=1
 _fangd_upper=1.1.0
 pkgdesc='Razer Blade control center and privileged hardware daemon'

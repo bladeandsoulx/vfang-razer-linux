@@ -1,8 +1,11 @@
 //! Real hardware backend: Razer EC over hidraw (Linux only).
 
-use super::{sensors::Sensors, Hw, ModelInfo, Sample};
+use super::{
+    connection::Connection, lighting::apply_keyboard_effect, sensors::Sensors,
+    transport::command_with_retry, Hw, ModelInfo, Sample,
+};
 use crate::state::AppliedState;
-use fang_protocol::api::{Boost, FanMode, KbdEffect, LogoMode, PerfMode};
+use fang_protocol::api::{Boost, FanMode, LogoMode, PerfMode};
 use fang_protocol::models;
 use fang_protocol::packet::{self, Report, RAZER_VID, REPORT_LEN, ZONES};
 use hidapi::{HidApi, HidDevice};
@@ -10,11 +13,15 @@ use std::thread;
 use std::time::Duration;
 
 pub struct RazerHw {
+    ec: Connection<RazerEc>,
+    sensors: Sensors,
+}
+
+struct RazerEc {
     device: HidDevice,
     model: &'static models::LaptopModel,
     verified: bool,
     name: String,
-    sensors: Sensors,
 }
 
 const UNVERIFIED_PID_ENV: &str = "FANGD_ALLOW_UNVERIFIED_PID";
@@ -55,8 +62,8 @@ fn choose_laptop(candidates: &[(u16, u16)], approved_unverified: Option<u16>) ->
         })
 }
 
-impl RazerHw {
-    pub fn open() -> Result<RazerHw, String> {
+impl RazerEc {
+    fn open() -> Result<Self, String> {
         let api = HidApi::new().map_err(|e| format!("hidapi init: {e}"))?;
         // A Razer mouse or keyboard also has vendor id 0x1532 and presents an
         // interface 0, so the first match isn't necessarily the laptop — and
@@ -121,77 +128,50 @@ impl RazerHw {
             );
         }
         log::info!("found {name}");
-        Ok(RazerHw {
+        Ok(Self {
             device,
             model,
             verified,
             name,
-            sensors: Sensors::discover(),
         })
     }
+}
 
-    /// Send one report and read back the EC's answer. Retry once when the EC
-    /// is busy or returns a malformed/mismatched response.
-    fn command(&self, report: Report) -> Result<Report, String> {
-        for attempt in 0..2 {
-            let buf = report.to_feature_report();
-            self.device
-                .send_feature_report(&buf)
-                .map_err(|e| format!("send_feature_report: {e}"))?;
-            thread::sleep(Duration::from_micros(1500));
-
-            let mut resp = [0u8; REPORT_LEN];
-            let bytes_read = self
-                .device
-                .get_feature_report(&mut resp)
-                .map_err(|e| format!("get_feature_report: {e}"))?;
-            let response = resp
-                .get(..bytes_read)
-                .ok_or_else(|| format!("invalid feature report length {bytes_read}"))?;
-            let parsed = match Report::response_from_feature_report(&report, response) {
-                Ok(parsed) => parsed,
-                Err(e) if attempt == 0 => {
-                    log::warn!(
-                        "invalid EC response for {:#04x}/{:#04x}: {e}; retrying",
-                        report.command_class,
-                        report.command_id
-                    );
-                    thread::sleep(Duration::from_millis(20));
-                    continue;
-                }
-                Err(e) => {
-                    return Err(format!(
-                        "invalid EC response for {:#04x}/{:#04x}: {e}",
-                        report.command_class, report.command_id
-                    ))
-                }
-            };
-
-            match parsed.status {
-                packet::status::SUCCESS => return Ok(parsed),
-                packet::status::BUSY if attempt == 0 => {
-                    thread::sleep(Duration::from_millis(20));
-                    continue;
-                }
-                packet::status::NOT_SUPPORTED => {
-                    return Err(format!(
-                        "EC rejected command {:#04x}/{:#04x} as unsupported",
-                        report.command_class, report.command_id
-                    ))
-                }
-                other => {
-                    return Err(format!(
-                        "EC status {other:#04x} for command {:#04x}/{:#04x}",
-                        report.command_class, report.command_id
-                    ))
-                }
-            }
+impl RazerHw {
+    pub fn new() -> Self {
+        Self {
+            ec: Connection::new(RazerEc::open),
+            sensors: Sensors::discover(),
         }
-        Err("EC busy".into())
     }
 
-    fn clamp_rpm(&self, rpm: u16) -> u8 {
-        (rpm.clamp(self.model.fan_rpm_min, self.model.fan_rpm_max) / 100) as u8
+    /// Keep HID loss/discovery separate from bounded command-response retries.
+    fn command(&self, report: Report) -> Result<Report, String> {
+        let ec = self
+            .ec
+            .get()
+            .ok_or("no Razer laptop device present; discovery will retry")?;
+        command_with_retry(
+            &report,
+            || {
+                let buf = report.to_feature_report();
+                ec.device.send_feature_report(&buf).map_err(|e| {
+                    self.ec.invalidate();
+                    format!("send_feature_report: {e}")
+                })?;
+                thread::sleep(Duration::from_micros(1500));
+
+                let mut resp = [0u8; REPORT_LEN];
+                let bytes_read = ec.device.get_feature_report(&mut resp).map_err(|e| {
+                    self.ec.invalidate();
+                    format!("get_feature_report: {e}")
+                })?;
+                resp.get(..bytes_read)
+                    .map(|response| response.to_vec())
+                    .ok_or_else(|| format!("invalid feature report length {bytes_read}"))
+            },
+            thread::sleep,
+        )
     }
 }
 
@@ -256,13 +236,7 @@ where
     command(packet::set_brightness(
         (state.kbd_brightness.min(100) as u16 * 255 / 100) as u8,
     ))?;
-    let (effect_id, params): (u8, Vec<u8>) = match state.kbd_effect {
-        KbdEffect::Off => (packet::kbd_effect::OFF, vec![]),
-        KbdEffect::Static { r, g, b } => (packet::kbd_effect::STATIC, vec![r, g, b]),
-        KbdEffect::Spectrum => (packet::kbd_effect::SPECTRUM, vec![]),
-        KbdEffect::Wave => (packet::kbd_effect::WAVE, vec![0x01]),
-    };
-    command(packet::set_kbd_effect(effect_id, &params))?;
+    apply_keyboard_effect(model.pid, state.kbd_effect, command)?;
     if model.has_logo {
         if state.logo_led != LogoMode::Off {
             let effect = match state.logo_led {
@@ -319,25 +293,44 @@ where
 
 impl Hw for RazerHw {
     fn info(&self) -> ModelInfo {
+        let Some(ec) = self.ec.get() else {
+            return ModelInfo {
+                name: "No Razer device found (retrying)".into(),
+                device_present: false,
+                verified: false,
+                mock: false,
+                fan_rpm_min: 0,
+                fan_rpm_max: 0,
+                has_cpu_boost_oc: false,
+                has_bho: false,
+                has_logo: false,
+            };
+        };
         ModelInfo {
-            name: self.name.clone(),
+            name: ec.name.clone(),
             device_present: true,
-            verified: self.verified,
+            verified: ec.verified,
             mock: false,
-            fan_rpm_min: self.model.fan_rpm_min,
-            fan_rpm_max: self.model.fan_rpm_max,
-            has_cpu_boost_oc: self.model.has_cpu_boost_oc,
-            has_bho: self.model.has_bho,
-            has_logo: self.model.has_logo,
+            fan_rpm_min: ec.model.fan_rpm_min,
+            fan_rpm_max: ec.model.fan_rpm_max,
+            has_cpu_boost_oc: ec.model.has_cpu_boost_oc,
+            has_bho: ec.model.has_bho,
+            has_logo: ec.model.has_logo,
         }
     }
 
+    fn reconnect(&mut self) -> bool {
+        self.ec.reconnect()
+    }
+
     fn apply(&mut self, state: &AppliedState) -> Result<(), String> {
-        apply_state_with_recovery(state, self.model, |report| self.command(report).map(|_| ()))
+        let model = self.ec.get().ok_or("no Razer laptop device present")?.model;
+        apply_state_with_recovery(state, model, |report| self.command(report).map(|_| ()))
     }
 
     fn set_fan_target(&mut self, rpm: u16) -> Result<(), String> {
-        let rpm = self.clamp_rpm(rpm);
+        let model = self.ec.get().ok_or("no Razer laptop device present")?.model;
+        let rpm = (rpm.clamp(model.fan_rpm_min, model.fan_rpm_max) / 100) as u8;
         for zone in ZONES {
             self.command(packet::set_fan_rpm(zone, rpm))?;
         }
@@ -345,6 +338,11 @@ impl Hw for RazerHw {
     }
 
     fn restore_auto_fan(&mut self, perf_mode: PerfMode) -> Result<(), String> {
+        if self.ec.get().is_none() {
+            return Err(
+                "no usable Razer EC handle; automatic fan recovery was not confirmed".into(),
+            );
+        }
         restore_auto_commands(perf_mode, &mut |report| self.command(report).map(|_| ()))
     }
 
@@ -369,60 +367,6 @@ impl Hw for RazerHw {
     }
 }
 
-/// Fallback when no Razer USB device is found: telemetry without control.
-pub struct MonitorOnly {
-    sensors: Sensors,
-}
-
-impl MonitorOnly {
-    pub fn new() -> MonitorOnly {
-        MonitorOnly {
-            sensors: Sensors::discover(),
-        }
-    }
-}
-
-impl Hw for MonitorOnly {
-    fn info(&self) -> ModelInfo {
-        ModelInfo {
-            name: "No Razer device found".into(),
-            device_present: false,
-            verified: false,
-            mock: false,
-            fan_rpm_min: 0,
-            fan_rpm_max: 0,
-            has_cpu_boost_oc: false,
-            has_bho: false,
-            has_logo: false,
-        }
-    }
-
-    fn apply(&mut self, _state: &AppliedState) -> Result<(), String> {
-        Err("no Razer laptop device present".into())
-    }
-
-    fn set_fan_target(&mut self, _rpm: u16) -> Result<(), String> {
-        Err("no Razer laptop device present".into())
-    }
-
-    fn restore_auto_fan(&mut self, _perf_mode: PerfMode) -> Result<(), String> {
-        Ok(())
-    }
-
-    fn sample(&mut self) -> Sample {
-        let r = self.sensors.read();
-        Sample {
-            cpu_temp_c: r.cpu_temp_c,
-            gpu_temp_c: r.gpu_temp_c,
-            cpu_power_w: r.cpu_power_w,
-            gpu_power_w: r.gpu_power_w,
-            gpu_asleep: r.gpu_asleep,
-            igpu: r.igpu,
-            fan_rpm: vec![],
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
@@ -430,7 +374,7 @@ mod tests {
         restore_auto_commands,
     };
     use crate::state::AppliedState;
-    use fang_protocol::api::{Boost, FanMode, PerfMode};
+    use fang_protocol::api::{Boost, FanMode, KbdEffect, PerfMode};
     use fang_protocol::models;
     use fang_protocol::packet::{Report, Zone};
 
@@ -601,5 +545,98 @@ mod tests {
         assert_eq!(seen.len(), 2);
         assert_auto_report(&seen[0], Zone::Fan1);
         assert_auto_report(&seen[1], Zone::Fan2);
+    }
+
+    #[test]
+    fn blade_16_2024_static_frame_follows_brightness_and_precedes_logo_writes() {
+        let model = models::MODELS
+            .iter()
+            .find(|model| model.pid == 0x02b7)
+            .unwrap();
+        let state = AppliedState {
+            kbd_effect: KbdEffect::Static { r: 255, g: 0, b: 0 },
+            ..AppliedState::default()
+        };
+        let mut reports = Vec::new();
+        apply_state_once(&state, model, &mut |report| {
+            reports.push(report);
+            Ok(())
+        })
+        .unwrap();
+        let start = reports
+            .iter()
+            .position(|report| report.command_id == 0x0b)
+            .unwrap();
+        assert_eq!(
+            (
+                reports[start - 1].command_class,
+                reports[start - 1].command_id
+            ),
+            (3, 3)
+        );
+        for (row, report) in reports[start..start + 6].iter().enumerate() {
+            assert_eq!(report.args[1], row as u8);
+            assert_eq!(&report.args[4..7], &[255, 0, 0]);
+        }
+        assert_eq!(&reports[start + 6].args[..2], &[5, 0]);
+        assert_eq!(
+            (
+                reports[start + 7].command_class,
+                reports[start + 7].command_id
+            ),
+            (3, 2)
+        );
+        assert_eq!(
+            (
+                reports[start + 8].command_class,
+                reports[start + 8].command_id
+            ),
+            (3, 0)
+        );
+        assert!(!reports
+            .iter()
+            .any(|report| report.command_id == 0x0a && report.args[0] == 6));
+    }
+
+    #[test]
+    fn every_custom_frame_failure_restores_both_fans_and_skips_later_lighting() {
+        let model = models::MODELS
+            .iter()
+            .find(|model| model.pid == 0x02b7)
+            .unwrap();
+        let state = manual_state();
+        let mut forward = Vec::new();
+        apply_state_once(&state, model, &mut |report| {
+            forward.push(report);
+            Ok(())
+        })
+        .unwrap();
+        let start = forward
+            .iter()
+            .position(|report| report.command_id == 0x0b)
+            .unwrap();
+        for fail_at in start..start + 7 {
+            let mut seen = Vec::new();
+            let result = apply_state_with_recovery(&state, model, |report| {
+                seen.push(report);
+                if seen.len() == fail_at + 1 {
+                    Err("frame transport failed".into())
+                } else {
+                    Ok(())
+                }
+            });
+            let error = result.unwrap_err();
+            assert!(error.contains("static keyboard frame"), "{error}");
+            assert!(
+                error.contains("restored EC automatic fan control"),
+                "{error}"
+            );
+            assert_eq!(seen.len(), fail_at + 3);
+            assert_auto_report(&seen[seen.len() - 2], Zone::Fan1);
+            assert_auto_report(&seen[seen.len() - 1], Zone::Fan2);
+            if fail_at < start + 6 {
+                assert!(!seen.iter().any(|report| report.command_id == 0x0a));
+            }
+        }
     }
 }

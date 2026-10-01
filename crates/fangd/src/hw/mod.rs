@@ -3,6 +3,10 @@
 use crate::state::AppliedState;
 use fang_protocol::api::PerfMode;
 
+#[cfg(any(target_os = "linux", test))]
+mod connection;
+#[cfg(any(target_os = "linux", test))]
+mod lighting;
 pub mod mock;
 #[cfg(target_os = "linux")]
 pub mod razer;
@@ -10,6 +14,8 @@ pub mod razer;
 pub mod runtime_pm;
 #[cfg(target_os = "linux")]
 pub mod sensors;
+#[cfg(any(target_os = "linux", test))]
+mod transport;
 
 #[derive(Clone, Debug)]
 pub struct ModelInfo {
@@ -49,6 +55,11 @@ pub struct Sample {
 
 pub trait Hw: Send {
     fn info(&self) -> ModelInfo;
+    /// Retry unavailable hardware. True means the replacement needs a full
+    /// state apply before any software fan targets may be sent.
+    fn reconnect(&mut self) -> bool {
+        false
+    }
     /// Push the desired state to the EC. Errors are surfaced to the client.
     fn apply(&mut self, state: &AppliedState) -> Result<(), String>;
     /// Update an already-manual fan target without reapplying unrelated state.
@@ -66,13 +77,7 @@ pub fn open(mock: bool) -> Box<dyn Hw> {
     #[cfg(target_os = "linux")]
     {
         if !mock {
-            match razer::RazerHw::open() {
-                Ok(hw) => return Box::new(hw),
-                Err(e) => {
-                    log::warn!("no Razer laptop device: {e}; running monitor-only");
-                    return Box::new(razer::MonitorOnly::new());
-                }
-            }
+            return Box::new(razer::RazerHw::new());
         }
     }
     let _ = mock;

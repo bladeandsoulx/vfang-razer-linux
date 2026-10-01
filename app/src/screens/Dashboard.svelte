@@ -2,6 +2,7 @@
   import Gauge from '../lib/components/Gauge.svelte';
   import Sparkline from '../lib/components/Sparkline.svelte';
   import FanSpinner from '../lib/components/FanSpinner.svelte';
+  import TelemetryNotice from '../lib/components/TelemetryNotice.svelte';
   import { telemetry, status, cpuHistory, rpmHistory, avgRpm } from '../lib/stores.js';
 
   const MODE_LABEL = {
@@ -22,6 +23,7 @@
   );
 </script>
 
+<TelemetryNotice />
 <div class="grid" class:four={hasIgpu}>
   <Gauge value={$telemetry?.cpu_temp_c} label="CPU package" sub={watts($telemetry?.cpu_power_w)} />
   <Gauge
@@ -82,11 +84,22 @@
     <span class="mode mono">{MODE_LABEL[$status?.perf_mode] ?? '--'}</span>
     <span class="sub">
       {#if $status?.fan?.mode === 'manual'}
-        fan pinned at {$status.fan.rpm} rpm
+        requested fan target: {$status.fan.rpm} rpm
+      {:else if $status?.fan?.mode === 'curve'}
+        fan curve: custom
+        {#if $telemetry?.fan_target_rpm != null}· target {$telemetry.fan_target_rpm} rpm{/if}
+      {:else if $status?.fan?.mode === 'auto'}
+        fan control: EC automatic
       {:else}
-        fan curve: automatic
+        fan mode unavailable
       {/if}
     </span>
+    {#if $telemetry?.thermal_override_active}
+      <span class="override" role="status">
+        {#if $telemetry.thermal_override_reason === 'sensor_unavailable'}CPU temperature sensor unavailable · {/if}
+        Thermal override active · target {$telemetry.fan_target_rpm ?? $status?.fan_rpm_max ?? '--'} RPM
+      </span>
+    {/if}
   </div>
 </div>
 
@@ -165,6 +178,7 @@
     grid-column: 1 / -1;
     display: flex;
     align-items: baseline;
+    flex-wrap: wrap;
     gap: 16px;
     padding: 14px 18px;
   }
@@ -179,5 +193,11 @@
     font-size: 12px;
     color: var(--ink-dim);
     margin-left: auto;
+  }
+
+  .override {
+    flex-basis: 100%;
+    color: var(--amber);
+    font-size: 12px;
   }
 </style>

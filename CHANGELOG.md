@@ -4,6 +4,56 @@ All notable changes to VFang are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] — 2026-10-01 — Keyboard colors, resume safety and recovery
+
+### Fixed
+
+- Blade 16 (2024), USB PID `1532:02B7`, uses a solid-color 6x16 custom
+  keyboard frame for Static instead of the firmware's ignored static effect
+  command. Six rows are uploaded before the volatile frame is activated.
+  This follows the hardware-tested workaround in
+  [OpenRazer PR #2827](https://github.com/openrazer/openrazer/pull/2827),
+  revision `2c03306a686203c2573daa3d28a5919aa47848ed`.
+- Custom-frame commands make at most five attempts when Busy, with bounded
+  waits. Invalid responses retain a single retry; transport loss, unsupported
+  commands and other EC errors fail immediately. Errors identify the failed
+  row or activation and use the existing state rollback and fan-safe recovery.
+- Resume and full hardware reapply discard cached CPU/GPU temperatures before
+  evaluating fan policy. Manual and Curve control hold the model maximum until
+  a new CPU reading arrives, including when the first post-resume reads fail.
+- Daemon preference commands report state-file save errors, retain the last
+  published preferences, and restore the previous hardware state. Failed
+  rollback falls back to EC Auto when possible and reports unconfirmed recovery.
+- Power automation retries failed hardware or persistence changes every five
+  seconds on the same source. Source changes and successful explicit profile,
+  fan or automation choices supersede pending retries.
+- Dashboard fan labels distinguish EC Auto, Manual requested targets and Custom
+  Curve, and show thermal and missing-CPU-sensor overrides.
+- Dashboard and Fan screens warn when telemetry is at least five seconds old,
+  even if the stream stops producing events, and clear warnings on fresh data.
+- Monitor-only startup retries recognized EC discovery. Lost HID handles are
+  replaced without restarting sensors or NVML; recovered hardware receives a
+  complete, model-normalized state before software fan control resumes. Fans
+  remain at the model maximum until a fresh mandatory CPU reading permits a
+  lower target. Availability changes are broadcast to the app.
+- Delayed UI command responses cannot replace a newer automation/status event
+  or a newer confirmed command. Independent display and panel updates remain
+  independent, and command errors continue to surface.
+- Tagged releases require the complete reusable application CI to succeed
+  before publishing, alongside all existing installer and package gates.
+  Reusable CI package artifacts use distinct names from release artifacts;
+  package tests download the matching producer's packages, avoiding v4 upload
+  conflicts in the shared release run.
+
+### Notes
+
+- Packet, daemon, frontend and release regressions use mock transports and
+  isolated state files. The affected issue #7 laptop combines a 2023 motherboard
+  and 2024 chassis and still needs a physical color retest before the issue is
+  closed. Other model/effect encodings retain their existing behavior.
+- Physical unplug/replug, suspend/resume and issue #8 charging-limit confirmation
+  remain pending. TDP controls remain research only.
+
 ## [1.0.0] — 2026-09-30 — Reliability and hardware telemetry
 
 ### Added

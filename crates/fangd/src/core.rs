@@ -7,6 +7,7 @@ use fang_protocol::api::{
     Boost, Command, FanCurvePoint, FanMode, Status, ThermalOverrideReason, API_VERSION,
 };
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 /// The thermal guard is deliberately not configurable. It overrides both
 /// Manual and Curve control at the model's maximum fan target, then uses lower
@@ -20,6 +21,7 @@ const GPU_OVERRIDE_OFF_C: f32 = 82.0;
 const CPU_SENSOR_MISS_LIMIT: u8 = 3;
 const MIN_CURVE_POINTS: usize = 2;
 const MAX_CURVE_POINTS: usize = 8;
+const POWER_RETRY_INTERVAL: Duration = Duration::from_secs(5);
 
 pub struct ControlledSample {
     pub hw: Sample,
@@ -27,6 +29,7 @@ pub struct ControlledSample {
     pub thermal_override_active: bool,
     pub thermal_sensor_ok: bool,
     pub thermal_override_reason: Option<ThermalOverrideReason>,
+    pub status_changed: bool,
 }
 
 pub struct Core {
@@ -35,6 +38,10 @@ pub struct Core {
     state_path: PathBuf,
     /// Last sampled power source, so automation acts only on transitions.
     last_on_ac: Option<bool>,
+    /// Failed automation is retried without requiring another source change.
+    power_retry_at: Option<Instant>,
+    hardware_retry_at: Option<Instant>,
+    last_device_present: bool,
     /// Last target successfully sent by the software fan policy.
     fan_target_rpm: Option<u16>,
     /// True only after a complete state application succeeds. When recovery
@@ -50,11 +57,15 @@ pub struct Core {
 
 impl Core {
     pub fn new(hw: Box<dyn Hw>, state: AppliedState, state_path: PathBuf) -> Core {
+        let last_device_present = hw.info().device_present;
         let mut core = Core {
             hw,
             state,
             state_path,
             last_on_ac: None,
+            power_retry_at: None,
+            hardware_retry_at: None,
+            last_device_present,
             fan_target_rpm: None,
             hardware_state_applied: false,
             thermal_override_active: false,
@@ -106,7 +117,27 @@ impl Core {
     }
 
     pub fn sample(&mut self) -> ControlledSample {
+        self.sample_at(Instant::now())
+    }
+
+    fn sample_at(&mut self, now: Instant) -> ControlledSample {
+        let recovered = self.hw.reconnect();
+        if recovered {
+            self.mark_hardware_unapplied();
+            self.sanitize_loaded_state();
+            self.last_on_ac = None;
+            self.power_retry_at = None;
+            self.reapply();
+        } else if !self.hardware_state_applied
+            && self.hw.info().device_present
+            && self.hardware_retry_at.is_some_and(|retry| now >= retry)
+        {
+            self.reapply();
+        }
         let hw = self.hw.sample();
+        if !self.hw.info().device_present && self.hardware_state_applied {
+            self.mark_hardware_unapplied();
+        }
         if let Some(cpu) = hw.cpu_temp_c {
             self.last_cpu_temp_c = Some(cpu);
             self.cpu_missed_samples = 0;
@@ -115,12 +146,16 @@ impl Core {
         }
         self.last_gpu_temp_c = hw.gpu_temp_c;
         self.update_fan_policy();
+        let device_present = self.hw.info().device_present;
+        let status_changed = recovered || device_present != self.last_device_present;
+        self.last_device_present = device_present;
         ControlledSample {
             hw,
             fan_target_rpm: self.fan_target_rpm,
             thermal_override_active: self.thermal_override_active,
             thermal_sensor_ok: self.thermal_sensor_ok(),
             thermal_override_reason: self.thermal_override_reason,
+            status_changed,
         }
     }
 
@@ -130,8 +165,17 @@ impl Core {
 
     /// Re-push the persisted state to the EC (startup, resume from suspend).
     pub fn reapply(&mut self) {
+        // A full reapply can follow a long suspend or a replaced EC handle.
+        // Pre-reapply readings cannot release the max-fan startup guard, even
+        // when the next CPU read fails within the ordinary missed-read grace.
+        self.last_cpu_temp_c = None;
+        self.last_gpu_temp_c = None;
+        self.cpu_missed_samples = CPU_SENSOR_MISS_LIMIT;
         let state = self.state.clone();
         if let Err(e) = self.apply_hardware_state(&state) {
+            if !self.hardware_state_applied {
+                self.hardware_retry_at = Some(Instant::now() + POWER_RETRY_INTERVAL);
+            }
             log::warn!("could not apply state to hardware: {e}");
             return;
         }
@@ -157,6 +201,7 @@ impl Core {
         let apply_error = match self.hw.apply(desired) {
             Ok(()) => {
                 self.hardware_state_applied = true;
+                self.hardware_retry_at = None;
                 return Ok(());
             }
             Err(e) => e,
@@ -167,6 +212,7 @@ impl Core {
             match self.hw.apply(&previous) {
                 Ok(()) => {
                     self.hardware_state_applied = true;
+                    self.hardware_retry_at = None;
                     self.reset_runtime_fan_target();
                     return Err(format!("{apply_error}; previous hardware state restored"));
                 }
@@ -194,9 +240,36 @@ impl Core {
 
     fn mark_hardware_unapplied(&mut self) {
         self.hardware_state_applied = false;
+        self.hardware_retry_at = Some(Instant::now() + POWER_RETRY_INTERVAL);
         self.fan_target_rpm = None;
         self.thermal_override_active = false;
         self.thermal_override_reason = None;
+    }
+
+    /// Do not publish desired state until both the EC and state file accept
+    /// it. A failed save restores the previous hardware state, or falls back
+    /// to EC Auto through the same bounded recovery used for failed writes.
+    fn commit_state(&mut self, next: AppliedState) -> Result<(), String> {
+        self.apply_hardware_state(&next)?;
+        if let Err(error) = next.save(&self.state_path) {
+            let previous = self.state.clone();
+            let recovery = match self.apply_hardware_state(&previous) {
+                Ok(()) => {
+                    self.reset_runtime_fan_target();
+                    self.update_fan_policy();
+                    "previous hardware state restored".to_string()
+                }
+                Err(recovery) => recovery,
+            };
+            return Err(format!(
+                "failed to persist state to {}: {error}; {recovery}",
+                self.state_path.display()
+            ));
+        }
+        self.state = next;
+        self.reset_runtime_fan_target();
+        self.update_fan_policy();
+        Ok(())
     }
 
     /// Normalize persisted values before the first EC command. This protects
@@ -243,7 +316,9 @@ impl Core {
         self.state.kbd_brightness = self.state.kbd_brightness.min(100);
         if self.state != before {
             log::warn!("normalized persisted state for the detected model");
-            self.state.save(&self.state_path);
+            if let Err(error) = self.state.save(&self.state_path) {
+                log::error!("could not persist normalized state: {error}");
+            }
         }
     }
 
@@ -400,13 +475,22 @@ impl Core {
         }
     }
 
-    /// Fed the current power source each telemetry tick. When automation is on
-    /// and the source just changed (including the first known reading), applies
-    /// that source's profile + fan and returns the new status to broadcast.
+    /// Fed the current power source each telemetry tick. When automation is
+    /// enabled, apply the source's profile + fan on a transition or a due retry.
+    /// Return whether a successfully committed state should be broadcast.
     pub fn power_tick(&mut self, on_ac: Option<bool>) -> bool {
+        self.power_tick_at(on_ac, Instant::now())
+    }
+
+    fn power_tick_at(&mut self, on_ac: Option<bool>, now: Instant) -> bool {
         let changed = on_ac != self.last_on_ac;
         self.last_on_ac = on_ac;
-        if !self.state.auto_power || !changed {
+        if changed || !self.state.auto_power {
+            self.power_retry_at = None;
+        }
+        if !self.state.auto_power
+            || (!changed && self.power_retry_at.is_none_or(|retry| now < retry))
+        {
             return false;
         }
         let Some(on_ac) = on_ac else {
@@ -426,17 +510,19 @@ impl Core {
         if let FanMode::Curve { points } = &next.fan {
             next.fan_curve = points.clone();
         }
-        if next.perf_mode == self.state.perf_mode && next.fan == self.state.fan {
+        if next.perf_mode == self.state.perf_mode
+            && next.fan == self.state.fan
+            && self.hardware_state_applied
+        {
+            self.power_retry_at = None;
             return false;
         }
-        if let Err(e) = self.apply_hardware_state(&next) {
+        if let Err(e) = self.commit_state(next) {
+            self.power_retry_at = Some(now + POWER_RETRY_INTERVAL);
             log::warn!("power automation: applying {mode:?} failed: {e}");
             return false;
         }
-        self.state = next;
-        self.reset_runtime_fan_target();
-        self.update_fan_policy();
-        self.state.save(&self.state_path);
+        self.power_retry_at = None;
         log::info!(
             "power automation: now on {} — {mode:?}, fan {:?}",
             if on_ac { "AC" } else { "battery" },
@@ -533,11 +619,15 @@ impl Core {
             }
             _ => return Ok(false),
         }
-        self.apply_hardware_state(&next)?;
-        self.state = next;
-        self.reset_runtime_fan_target();
-        self.update_fan_policy();
-        self.state.save(&self.state_path);
+        self.commit_state(next)?;
+        // An explicit profile/fan choice cancels an older failed automatic
+        // transition; it must not be overwritten by a delayed retry.
+        if matches!(
+            cmd,
+            Command::SetPerfMode { .. } | Command::SetFan { .. } | Command::SetAutoPower { .. }
+        ) {
+            self.power_retry_at = None;
+        }
         Ok(true)
     }
 }
@@ -589,6 +679,8 @@ fn thermal_override_next(active: bool, cpu: Option<f32>, gpu: Option<f32>) -> bo
 
 #[cfg(test)]
 mod tests {
+    mod reliability;
+
     use super::*;
     use crate::hw::ModelInfo;
     use fang_protocol::api::PerfMode;

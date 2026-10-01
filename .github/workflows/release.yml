@@ -12,6 +12,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  application-tests:
+    name: application + daemon CI on tagged commit
+    uses: ./.github/workflows/ci.yml
+
   release-checks:
     name: installer + release contracts
     runs-on: ubuntu-24.04
@@ -29,6 +33,7 @@ jobs:
       - run: node --test packaging/installer/source-install.test.mjs packaging/installer/package-output.test.mjs
       - run: node packaging/installer/installer.test.mjs
       - run: node packaging/release/release-contract.test.mjs
+      - run: node --test packaging/release/workflow.test.mjs
       - run: node packaging/release/publish.test.mjs
       - run: node --test packaging/release/release-notes.test.mjs
       - run: node packaging/deb/verify.test.mjs
@@ -249,7 +254,8 @@ jobs:
 
   publish:
     name: publish immutable eight-asset release
-    needs: [release-checks, debs, deb-test, rpms, rpm-test, arch-packages, arch-test]
+    needs: [application-tests, release-checks, debs, deb-test, rpms, rpm-test, arch-packages, arch-test]
+    if: ${{ success() && needs.application-tests.result == 'success' }}
     runs-on: ubuntu-22.04
     permissions:
       contents: write

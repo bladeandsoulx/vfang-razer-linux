@@ -1,5 +1,6 @@
 <script>
   import FanSpinner from '../lib/components/FanSpinner.svelte';
+  import TelemetryNotice from '../lib/components/TelemetryNotice.svelte';
   import { status, telemetry, avgRpm } from '../lib/stores.js';
   import { setFan } from '../lib/bridge.js';
 
@@ -105,6 +106,7 @@
   }
 </script>
 
+<TelemetryNotice />
 <div class="wrap">
   <div class="visual card rise">
     <FanSpinner rpm={runtimeTarget ?? 0} size={190} />
